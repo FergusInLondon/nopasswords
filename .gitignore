@@ -7,3 +7,8 @@ client/package-lock.json
 # Example static files (compiled)
 examples/*/static/*.js
 examples/*/static/*.map
+
+# Go binaries in examples
+examples/*/audit-logging
+examples/*/webauthn-demo
+examples/*/srp-demo
