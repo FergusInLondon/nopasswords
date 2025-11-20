@@ -274,12 +274,16 @@
         </div>
     </div>
 
+    <script src="/dist/nopasswords-srp.js"></script>
     <script>
-        // Note: This is a simplified inline SRP client for demo purposes.
-        // In production, use the compiled @nopasswords/srp-client library.
-
         const API_BASE = 'http://localhost:8081';
         const GROUP = 3; // 2048-bit group
+
+        // Initialize the SRP client
+        const srpClient = new NoPasswordsSRP.SRPClient({
+            group: GROUP,
+            baseURL: API_BASE
+        });
 
         function switchTab(tab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -314,29 +318,13 @@
             try {
                 showStatus('register-status', '⏳ Computing verifier...', 'info');
 
-                // Note: This is a placeholder. In a real implementation, you would:
-                // 1. Import the SRP client library
-                // 2. Compute the verifier using the SRP protocol
-                // 3. Send the verifier to the server
-
-                const response = await fetch(`${API_BASE}/api/srp/register`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        user_id: email,
-                        salt: 'demo-salt-base64',
-                        verifier: 'demo-verifier-base64',
-                        group: GROUP
-                    })
-                });
-
-                const result = await response.json();
+                // Use the real SRP client to register
+                const result = await srpClient.register(email, password);
 
                 if (result.success) {
                     showStatus('register-status',
-                        `✅ Registration successful!<br>User: <code>${result.user_id}</code><br><br>` +
-                        `<strong>Note:</strong> This demo uses placeholder values. In production, the SRP client ` +
-                        `library computes the actual verifier from your password using cryptographic operations.`,
+                        `✅ Registration successful!<br>User: <code>${result.userID}</code><br><br>` +
+                        `Your password has been cryptographically transformed into a verifier and stored securely on the server.`,
                         'success'
                     );
                 } else {
@@ -363,24 +351,25 @@
             try {
                 showStatus('login-status', '⏳ Authenticating...', 'info');
 
-                // Note: This is a placeholder. In a real implementation, you would:
-                // 1. Call /api/srp/authenticate/begin to get salt and B
-                // 2. Compute client ephemeral A and proof M1
-                // 3. Call /api/srp/authenticate/finish with A and M1
-                // 4. Verify server's proof M2
-                // 5. Derive session key K
+                // Use the real SRP client to authenticate
+                const result = await srpClient.authenticate(email, password);
 
-                showStatus('login-status',
-                    `ℹ️ <strong>Demo Mode</strong><br><br>` +
-                    `In a full implementation, the SRP client would:<br>` +
-                    `1. Request salt and server ephemeral (B) from <code>/authenticate/begin</code><br>` +
-                    `2. Compute client ephemeral (A) and proof (M1)<br>` +
-                    `3. Send A and M1 to <code>/authenticate/finish</code><br>` +
-                    `4. Verify server's proof (M2)<br>` +
-                    `5. Derive shared session key<br><br>` +
-                    `<strong>Your password never leaves the browser!</strong>`,
-                    'info'
-                );
+                if (result.success) {
+                    const sessionKeyHex = Array.from(result.sessionKey)
+                        .map(b => b.toString(16).padStart(2, '0'))
+                        .join('');
+
+                    showStatus('login-status',
+                        `✅ Authentication successful!<br><br>` +
+                        `<strong>Session Key (first 32 bytes):</strong><br>` +
+                        `<code style="word-break: break-all;">${sessionKeyHex.substring(0, 64)}...</code><br><br>` +
+                        `Your password never left the browser! Both you and the server proved knowledge of ` +
+                        `the password without transmitting it.`,
+                        'success'
+                    );
+                } else {
+                    showStatus('login-status', `❌ Authentication failed: ${result.error}`, 'error');
+                }
             } catch (error) {
                 showStatus('login-status', `❌ Error: ${error.message}`, 'error');
             } finally {
