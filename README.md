@@ -5,12 +5,11 @@
 [![GoDoc](https://pkg.go.dev/badge/go.fergus.london/nopasswords)](https://pkg.go.dev/go.fergus.london/nopasswords)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A comprehensive, production-ready Go library for passwordless authentication supporting multiple methods: Signed Tokens (Magic Links), WebAuthn/FIDO2, and Secure Remote Password (SRP).
+A comprehensive, production-ready Go library for passwordless authentication supporting multiple methods: WebAuthn/FIDO2, and Secure Remote Password (SRP).
 
 ## Features
 
 - **🔐 Multiple Authentication Methods**
-  - **Signed Tokens**: Time-limited, cryptographically signed tokens for magic link authentication
   - **WebAuthn/FIDO2**: Hardware tokens, platform authenticators (Touch ID, Windows Hello), security keys
   - **SRP (RFC5054)**: Zero-knowledge password proof without transmitting passwords
 
@@ -32,41 +31,6 @@ A comprehensive, production-ready Go library for passwordless authentication sup
   - Comprehensive documentation
 
 ## Quick Start
-
-### Installation
-
-```bash
-go get go.fergus.london/nopasswords
-```
-
-### Example: Signed Token Authentication
-
-```go
-import (
-    "go.fergus.london/nopasswords/core"
-    "go.fergus.london/nopasswords/core/memory"
-    "go.fergus.london/nopasswords/signedtoken"
-    "time"
-)
-
-// Create a signer with a secret key
-signer, _ := signedtoken.NewHMACSignerSHA256([]byte("your-secret-key-min-32-bytes-long!"))
-
-// Create a token manager
-manager, _ := signedtoken.NewManager(
-    signedtoken.WithSigner(signer),
-    signedtoken.WithDefaultLifetime(1 * time.Hour),
-    signedtoken.WithAuditLogger(memory.NewStdoutLogger()),
-)
-
-// Generate a token
-token, _ := manager.GenerateToken("user@example.com", nil)
-fmt.Println("Magic link token:", token)
-
-// Verify the token
-result, _ := manager.VerifyToken(token)
-fmt.Println("Authenticated user:", result.UserID)
-```
 
 ### Example: WebAuthn
 
@@ -121,7 +85,7 @@ docker-compose up dev
 docker-compose run test
 
 # Run WebAuthn example
-docker-compose up webauthn-demo
+docker compose up webauthn-demo
 # Visit http://localhost:8080
 ```
 
