@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoPasswords SRP Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: color 0.3s;
+            width: auto;
+            margin: 0;
+            border-radius: 0;
+            position: relative;
+        }
+
+        .tab.active {
+            color: #667eea;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #667eea;
+        }
+
+        .tab:hover:not(.active) {
+            color: #764ba2;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #666;
+        }
+
+        .info-box h3 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+        }
+
+        .info-box li {
+            margin: 5px 0;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 SRP Demo</h1>
+        <p class="subtitle">Secure Remote Password Authentication</p>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('register')">Register</button>
+            <button class="tab" onclick="switchTab('login')">Login</button>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="register-tab" class="tab-content active">
+            <div class="form-group">
+                <label for="reg-email">Email</label>
+                <input type="email" id="reg-email" placeholder="user@example.com" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="reg-password">Password</label>
+                <input type="password" id="reg-password" placeholder="Enter password" autocomplete="new-password">
+            </div>
+            <button id="register-btn" onclick="handleRegister()">
+                Register
+                <span id="register-loader" class="loader" style="display: none;"></span>
+            </button>
+            <div id="register-status"></div>
+        </div>
+
+        <!-- Login Form -->
+        <div id="login-tab" class="tab-content">
+            <div class="form-group">
+                <label for="login-email">Email</label>
+                <input type="email" id="login-email" placeholder="user@example.com" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password">
+            </div>
+            <button id="login-btn" onclick="handleLogin()">
+                Login
+                <span id="login-loader" class="loader" style="display: none;"></span>
+            </button>
+            <div id="login-status"></div>
+        </div>
+
+        <div class="info-box">
+            <h3>ℹ️ About SRP</h3>
+            <ul>
+                <li>Your password <strong>never</strong> leaves your browser</li>
+                <li>The server only stores a cryptographic verifier</li>
+                <li>Even if the database is compromised, passwords cannot be recovered</li>
+                <li>Both client and server prove knowledge of the password without transmitting it</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Note: This is a simplified inline SRP client for demo purposes.
+        // In production, use the compiled @nopasswords/srp-client library.
+
+        const API_BASE = 'http://localhost:8081';
+        const GROUP = 3; // 2048-bit group
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+
+        function showStatus(elementId, message, type) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.className = `status ${type}`;
+            statusEl.innerHTML = message;
+            statusEl.style.display = 'block';
+        }
+
+        function setLoading(btnId, loaderId, loading) {
+            document.getElementById(btnId).disabled = loading;
+            document.getElementById(loaderId).style.display = loading ? 'inline-block' : 'none';
+        }
+
+        async function handleRegister() {
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+
+            if (!email || !password) {
+                showStatus('register-status', 'Please enter both email and password', 'error');
+                return;
+            }
+
+            setLoading('register-btn', 'register-loader', true);
+
+            try {
+                showStatus('register-status', '⏳ Computing verifier...', 'info');
+
+                // Note: This is a placeholder. In a real implementation, you would:
+                // 1. Import the SRP client library
+                // 2. Compute the verifier using the SRP protocol
+                // 3. Send the verifier to the server
+
+                const response = await fetch(`${API_BASE}/api/srp/register`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: email,
+                        salt: 'demo-salt-base64',
+                        verifier: 'demo-verifier-base64',
+                        group: GROUP
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('register-status',
+                        `✅ Registration successful!<br>User: <code>${result.user_id}</code><br><br>` +
+                        `<strong>Note:</strong> This demo uses placeholder values. In production, the SRP client ` +
+                        `library computes the actual verifier from your password using cryptographic operations.`,
+                        'success'
+                    );
+                } else {
+                    showStatus('register-status', `❌ Registration failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('register-status', `❌ Error: ${error.message}`, 'error');
+            } finally {
+                setLoading('register-btn', 'register-loader', false);
+            }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                showStatus('login-status', 'Please enter both email and password', 'error');
+                return;
+            }
+
+            setLoading('login-btn', 'login-loader', true);
+
+            try {
+                showStatus('login-status', '⏳ Authenticating...', 'info');
+
+                // Note: This is a placeholder. In a real implementation, you would:
+                // 1. Call /api/srp/authenticate/begin to get salt and B
+                // 2. Compute client ephemeral A and proof M1
+                // 3. Call /api/srp/authenticate/finish with A and M1
+                // 4. Verify server's proof M2
+                // 5. Derive session key K
+
+                showStatus('login-status',
+                    `ℹ️ <strong>Demo Mode</strong><br><br>` +
+                    `In a full implementation, the SRP client would:<br>` +
+                    `1. Request salt and server ephemeral (B) from <code>/authenticate/begin</code><br>` +
+                    `2. Compute client ephemeral (A) and proof (M1)<br>` +
+                    `3. Send A and M1 to <code>/authenticate/finish</code><br>` +
+                    `4. Verify server's proof (M2)<br>` +
+                    `5. Derive shared session key<br><br>` +
+                    `<strong>Your password never leaves the browser!</strong>`,
+                    'info'
+                );
+            } catch (error) {
+                showStatus('login-status', `❌ Error: ${error.message}`, 'error');
+            } finally {
+                setLoading('login-btn', 'login-loader', false);
+            }
+        }
+    </script>
+</body>
+</html>
