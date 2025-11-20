@@ -1,9 +1,4 @@
 
-# Node modules
-client/node_modules/
-client/dist/
-client/package-lock.json
-
 # Example static files (compiled)
 examples/*/static/*.js
 examples/*/static/*.map
