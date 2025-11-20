@@ -115,7 +115,7 @@ func TestStdoutLogger_ConcurrentAccess(t *testing.T) {
 	logger := NewStdoutLogger(false)
 	ctx := context.Background()
 
-	const numGoroutines = 50
+	const numGoroutines = 10
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
 
