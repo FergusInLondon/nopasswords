@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoPasswords WebAuthn Demo</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .capabilities {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .capabilities strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .capabilities div {
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e1e8ed;
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>NoPasswords Demo</h1>
+        <p class="subtitle">WebAuthn/FIDO2 Passwordless Authentication</p>
+
+        <div id="capabilities" class="capabilities" style="display: none;">
+            <strong>Browser Capabilities:</strong>
+            <div id="webauthn-support"></div>
+            <div id="platform-auth"></div>
+            <div id="browser-name"></div>
+        </div>
+
+        <div class="card">
+            <h2>Register New Credential</h2>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="reg-userid">User ID</label>
+                    <input type="text" id="reg-userid" placeholder="user-123" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-username">Username</label>
+                    <input type="text" id="reg-username" placeholder="alice" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-displayname">Display Name</label>
+                    <input type="text" id="reg-displayname" placeholder="Alice Smith" required>
+                </div>
+                <button type="submit" id="register-btn">Register</button>
+                <div id="register-status" class="status"></div>
+            </form>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="card">
+            <h2>Authenticate</h2>
+            <form id="auth-form">
+                <div class="form-group">
+                    <label for="auth-userid">User ID</label>
+                    <input type="text" id="auth-userid" placeholder="user-123" required>
+                </div>
+                <button type="submit" id="auth-btn">Authenticate</button>
+                <div id="auth-status" class="status"></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/nopasswords-webauthn.js"></script>
+    <script>
+        // Initialize WebAuthn client
+        const client = new NoPasswordsWebAuthn.WebAuthnClient({
+            apiBaseURL: 'http://localhost:8080/api/webauthn'
+        });
+
+        // Check browser capabilities
+        async function checkCapabilities() {
+            const capabilities = await client.checkCapabilities();
+            const capDiv = document.getElementById('capabilities');
+            capDiv.style.display = 'block';
+
+            document.getElementById('webauthn-support').textContent =
+                `WebAuthn Support: ${capabilities.webauthn ? '✓ Yes' : '✗ No'}`;
+
+            document.getElementById('platform-auth').textContent =
+                `Platform Authenticator: ${capabilities.platformAuthenticator === null ? 'Unknown' :
+                    capabilities.platformAuthenticator ? '✓ Available' : '✗ Not Available'}`;
+
+            document.getElementById('browser-name').textContent =
+                `Browser: ${capabilities.browserName}`;
+
+            if (!capabilities.webauthn) {
+                showStatus('register-status', 'error', 'WebAuthn is not supported in this browser');
+                showStatus('auth-status', 'error', 'WebAuthn is not supported in this browser');
+                document.getElementById('register-btn').disabled = true;
+                document.getElementById('auth-btn').disabled = true;
+            }
+        }
+
+        // Show status message
+        function showStatus(elementId, type, message) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        // Hide status message
+        function hideStatus(elementId) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.style.display = 'none';
+        }
+
+        // Handle registration
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideStatus('register-status');
+
+            const userID = document.getElementById('reg-userid').value;
+            const userName = document.getElementById('reg-username').value;
+            const userDisplayName = document.getElementById('reg-displayname').value;
+
+            const registerBtn = document.getElementById('register-btn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Registering...';
+
+            try {
+                const result = await client.register({
+                    userID,
+                    userName,
+                    userDisplayName
+                });
+
+                if (result.success) {
+                    showStatus('register-status', 'success', 'Registration successful! You can now authenticate.');
+                    // Auto-fill auth form
+                    document.getElementById('auth-userid').value = userID;
+                } else {
+                    showStatus('register-status', 'error', result.error || 'Registration failed');
+                }
+            } catch (err) {
+                showStatus('register-status', 'error', err.message || 'Registration failed');
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Register';
+            }
+        });
+
+        // Handle authentication
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideStatus('auth-status');
+
+            const userID = document.getElementById('auth-userid').value;
+
+            const authBtn = document.getElementById('auth-btn');
+            authBtn.disabled = true;
+            authBtn.textContent = 'Authenticating...';
+
+            try {
+                const result = await client.authenticate({
+                    userID
+                });
+
+                if (result.success) {
+                    showStatus('auth-status', 'success',
+                        `Authentication successful! Logged in as: ${result.userID || userID}`);
+                } else {
+                    showStatus('auth-status', 'error', result.error || 'Authentication failed');
+                }
+            } catch (err) {
+                showStatus('auth-status', 'error', err.message || 'Authentication failed');
+            } finally {
+                authBtn.disabled = false;
+                authBtn.textContent = 'Authenticate';
+            }
+        });
+
+        // Check capabilities on page load
+        checkCapabilities();
+    </script>
+</body>
+</html>
