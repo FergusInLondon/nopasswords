@@ -85,6 +85,7 @@ func handleRegister(manager *srp.Manager) http.HandlerFunc {
 
 		var req srp.RegistrationRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			fmt.Println(err)
 			http.Error(w, "Invalid request", http.StatusBadRequest)
 			return
 		}
