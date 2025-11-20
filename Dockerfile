@@ -1,7 +1,7 @@
 # Development Dockerfile for NoPasswords
 # This provides a complete development environment with all dependencies
 
-FROM golang:1.23-bookworm
+FROM golang:1.25-bookworm
 
 # @risk Tampering: Pin versions to prevent supply chain attacks via compromised dependencies
 # @mitigation: Use specific versions in package.json and go.mod, verify checksums
