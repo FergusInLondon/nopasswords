@@ -91,7 +91,6 @@ func TestConfig(t *testing.T) {
 
 	assert.Equal(t, "TestApp", config.ApplicationName)
 	assert.Nil(t, config.CredentialStore)
-	assert.Nil(t, config.TokenStore)
 	assert.Nil(t, config.AuditLogger)
 }
 
@@ -103,16 +102,6 @@ func TestWithCredentialStore(t *testing.T) {
 	opt(config)
 
 	assert.Equal(t, mockStore, config.CredentialStore)
-}
-
-func TestWithTokenStore(t *testing.T) {
-	mockStore := &mockTokenStore{}
-	config := &Config{}
-
-	opt := WithTokenStore(mockStore)
-	opt(config)
-
-	assert.Equal(t, mockStore, config.TokenStore)
 }
 
 func TestWithAuditLogger(t *testing.T) {
@@ -136,20 +125,17 @@ func TestWithApplicationName(t *testing.T) {
 
 func TestApplyOptions(t *testing.T) {
 	mockStore := &mockCredentialStore{}
-	mockTokenStore := &mockTokenStore{}
 	mockLogger := &mockAuditLogger{}
 
 	config := &Config{}
 
 	ApplyOptions(config,
 		WithCredentialStore(mockStore),
-		WithTokenStore(mockTokenStore),
 		WithAuditLogger(mockLogger),
 		WithApplicationName("TestApp"),
 	)
 
 	assert.Equal(t, mockStore, config.CredentialStore)
-	assert.Equal(t, mockTokenStore, config.TokenStore)
 	assert.Equal(t, mockLogger, config.AuditLogger)
 	assert.Equal(t, "TestApp", config.ApplicationName)
 }
@@ -161,7 +147,6 @@ func TestApplyOptions_Empty(t *testing.T) {
 	ApplyOptions(config)
 
 	assert.Nil(t, config.CredentialStore)
-	assert.Nil(t, config.TokenStore)
 	assert.Nil(t, config.AuditLogger)
 }
 
@@ -187,24 +172,6 @@ func (m *mockCredentialStore) DeleteCredential(ctx context.Context, userID strin
 
 func (m *mockCredentialStore) UpdateCredential(ctx context.Context, userID string, credentialID string, data []byte) error {
 	return nil
-}
-
-type mockTokenStore struct{}
-
-func (m *mockTokenStore) StoreToken(ctx context.Context, tokenID string, userID string, expiresAt time.Time) error {
-	return nil
-}
-
-func (m *mockTokenStore) IsTokenRevoked(ctx context.Context, tokenID string) (bool, error) {
-	return false, nil
-}
-
-func (m *mockTokenStore) RevokeToken(ctx context.Context, tokenID string) error {
-	return nil
-}
-
-func (m *mockTokenStore) CleanupExpired(ctx context.Context) (int, error) {
-	return 0, nil
 }
 
 type mockAuditLogger struct{}

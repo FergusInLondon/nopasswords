@@ -96,7 +96,6 @@ nopasswords/
 ├── core/               # Core interfaces and types
 │   ├── memory/        # In-memory reference implementations
 │   └── *.go           # Shared types and interfaces
-├── signedtoken/       # Signed token (magic link) implementation
 ├── webauthn/          # WebAuthn/FIDO2 implementation
 ├── srp/               # Secure Remote Password implementation
 ├── client/            # TypeScript WebAuthn client library
@@ -120,7 +119,6 @@ NoPasswords uses a **dependency injection** pattern for maximum flexibility:
 ### Key Interfaces
 
 - **`CredentialStore`**: Store and retrieve authentication credentials
-- **`TokenStore`**: Optional token revocation support
 - **`AuditLogger`**: Security event logging
 
 See [`core/interfaces.go`](core/interfaces.go) for full interface definitions.

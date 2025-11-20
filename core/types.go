@@ -107,10 +107,6 @@ type Config struct {
 	// If nil, a default in-memory store will be used.
 	CredentialStore CredentialStore
 
-	// TokenStore is the optional storage backend for tokens.
-	// If nil, a default in-memory store will be used.
-	TokenStore TokenStore
-
 	// AuditLogger receives security audit events.
 	// If nil, a no-op logger will be used.
 	AuditLogger AuditLogger
@@ -127,13 +123,6 @@ type Option func(*Config)
 func WithCredentialStore(store CredentialStore) Option {
 	return func(c *Config) {
 		c.CredentialStore = store
-	}
-}
-
-// WithTokenStore sets the token storage implementation.
-func WithTokenStore(store TokenStore) Option {
-	return func(c *Config) {
-		c.TokenStore = store
 	}
 }
 

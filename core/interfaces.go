@@ -5,7 +5,6 @@ package core
 
 import (
 	"context"
-	"time"
 )
 
 // CredentialStore defines the interface for storing and retrieving authentication
@@ -58,42 +57,6 @@ type CredentialStore interface {
 	UpdateCredential(ctx context.Context, userID string, credentialID string, data []byte) error
 }
 
-// TokenStore provides optional storage for authentication tokens, primarily to support
-// token revocation. Not all authentication methods require token storage.
-//
-// Implementations must be safe for concurrent use by multiple goroutines.
-//
-// Security Considerations:
-//
-// @risk Denial of Service: Token storage can grow unbounded without proper cleanup.
-// Implementations should implement TTL-based cleanup or size limits.
-//
-// @risk Information Disclosure: Tokens may contain sensitive information. Ensure
-// storage is appropriately secured (encryption at rest, access controls, etc.).
-type TokenStore interface {
-	// StoreToken saves a token with an associated expiration time. The tokenID should
-	// be unique and derived from the token itself (e.g., hash of the token).
-	//
-	// Returns ErrAlreadyExists if a token with the same ID already exists.
-	StoreToken(ctx context.Context, tokenID string, userID string, expiresAt time.Time) error
-
-	// IsTokenRevoked checks if a token has been explicitly revoked.
-	//
-	// Returns false if the token is not found (not revoked), true if explicitly revoked.
-	// This method should not return errors for non-existent tokens.
-	IsTokenRevoked(ctx context.Context, tokenID string) (bool, error)
-
-	// RevokeToken marks a token as revoked, preventing its further use.
-	//
-	// This operation should be idempotent; revoking an already-revoked token is not an error.
-	RevokeToken(ctx context.Context, tokenID string) error
-
-	// CleanupExpired removes expired tokens from storage. Implementations should call
-	// this periodically to prevent unbounded growth.
-	//
-	// Returns the number of tokens cleaned up and any error encountered.
-	CleanupExpired(ctx context.Context) (int, error)
-}
 
 // AuditLogger defines the interface for structured security event logging.
 // All authentication operations generate audit events that are passed to this interface.
