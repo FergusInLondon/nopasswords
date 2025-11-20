@@ -13,7 +13,7 @@ import (
 )
 
 func TestNewManager(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	tests := []struct {
 		name    string
@@ -60,7 +60,7 @@ func TestNewManager(t *testing.T) {
 }
 
 func TestManager_Register(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	manager, err := NewManager(
 		WithCredentialStore(store),
 		WithGroup(3),
@@ -154,7 +154,7 @@ func TestManager_Register(t *testing.T) {
 }
 
 func TestManager_AuthenticationFlow(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	manager, err := NewManager(
 		WithCredentialStore(store),
 		WithGroup(3),
@@ -216,7 +216,7 @@ func TestManager_AuthenticationFlow(t *testing.T) {
 }
 
 func TestManager_AuthenticationFlow_WrongPassword(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	manager, err := NewManager(
 		WithCredentialStore(store),
 		WithGroup(3),
@@ -268,7 +268,7 @@ func TestManager_AuthenticationFlow_WrongPassword(t *testing.T) {
 }
 
 func TestManager_BeginAuthentication_UserNotFound(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	manager, err := NewManager(
 		WithCredentialStore(store),
 		WithGroup(3),
@@ -286,7 +286,7 @@ func TestManager_BeginAuthentication_UserNotFound(t *testing.T) {
 }
 
 func TestManager_FinishAuthentication_SessionExpired(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	manager, err := NewManager(
 		WithCredentialStore(store),
 		WithGroup(3),
@@ -337,7 +337,7 @@ func TestManager_FinishAuthentication_SessionExpired(t *testing.T) {
 }
 
 func TestManager_FinishAuthentication_InvalidA(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	manager, err := NewManager(
 		WithCredentialStore(store),
 		WithGroup(3),

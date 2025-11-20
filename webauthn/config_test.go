@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewConfig(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	tests := []struct {
 		name    string
@@ -106,7 +106,7 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestConfigDefaults(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -297,7 +297,7 @@ func TestWithTimeout(t *testing.T) {
 }
 
 func TestWithCredentialStore(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config := &Config{}
 	err := WithCredentialStore(store)(config)

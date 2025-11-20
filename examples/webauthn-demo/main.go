@@ -1,3 +1,4 @@
+// An example of using nopasswords to implement WebAuthN operations.
 package main
 
 import (
@@ -55,7 +56,7 @@ func main() {
 		webauthn.WithRPDisplayName("NoPasswords Demo"),
 		webauthn.WithRPID("localhost"),
 		webauthn.WithRPOrigins("http://localhost:8080"),
-		webauthn.WithCredentialStore(memory.NewMemoryCredentialStore()),
+		webauthn.WithCredentialStore(memory.NewCredentialStore()),
 		webauthn.WithAuditLogger(memory.NewStdoutLogger(true)),
 	)
 	if err != nil {

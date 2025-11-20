@@ -1,3 +1,4 @@
+// An example demonstrating Secure Remote Password (SRP) operations.
 package main
 
 import (
@@ -26,7 +27,7 @@ type sessionData struct {
 func main() {
 	// Initialize SRP manager
 	// WARNING: In-memory credential store is for demo only!
-	credStore := memory.NewMemoryCredentialStore()
+	credStore := memory.NewCredentialStore()
 	auditLogger := memory.NewStdoutLogger(true)
 
 	manager, err := srp.NewManager(

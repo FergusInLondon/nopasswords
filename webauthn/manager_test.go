@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewManager(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -37,7 +37,7 @@ func TestNewManagerWithNilConfig(t *testing.T) {
 }
 
 func TestBeginRegistration(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	logger := memory.NewStdoutLogger(false)
 
 	config, err := NewConfig(
@@ -75,7 +75,7 @@ func TestBeginRegistration(t *testing.T) {
 }
 
 func TestBeginRegistrationWithEmptyUserID(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -95,7 +95,7 @@ func TestBeginRegistrationWithEmptyUserID(t *testing.T) {
 }
 
 func TestBeginRegistrationWithEmptyUserName(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -115,7 +115,7 @@ func TestBeginRegistrationWithEmptyUserName(t *testing.T) {
 }
 
 func TestBeginAuthentication(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	logger := memory.NewStdoutLogger(false)
 
 	config, err := NewConfig(
@@ -161,7 +161,7 @@ func TestBeginAuthentication(t *testing.T) {
 }
 
 func TestBeginAuthenticationNoCredentials(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -181,7 +181,7 @@ func TestBeginAuthenticationNoCredentials(t *testing.T) {
 }
 
 func TestFinishRegistrationWithExpiredSession(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -211,7 +211,7 @@ func TestFinishRegistrationWithExpiredSession(t *testing.T) {
 }
 
 func TestFinishAuthenticationWithExpiredSession(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -254,7 +254,7 @@ func TestFinishAuthenticationWithExpiredSession(t *testing.T) {
 }
 
 func TestGenerateChallenge(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -280,7 +280,7 @@ func TestGenerateChallenge(t *testing.T) {
 }
 
 func TestManagerWithCustomOptions(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	logger := memory.NewStdoutLogger(false)
 
 	config, err := NewConfig(
@@ -314,7 +314,7 @@ func TestManagerWithCustomOptions(t *testing.T) {
 }
 
 func TestBeginRegistrationWithExistingCredentials(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -356,7 +356,7 @@ func TestBeginRegistrationWithExistingCredentials(t *testing.T) {
 }
 
 func TestNilSessionDataHandling(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),
@@ -383,7 +383,7 @@ func TestNilSessionDataHandling(t *testing.T) {
 }
 
 func TestNilResponseHandling(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	config, err := NewConfig(
 		WithRPDisplayName("Test RP"),

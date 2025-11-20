@@ -11,7 +11,7 @@ import (
 // nopLogger is a no-op implementation of core.AuditLogger
 type nopLogger struct{}
 
-func (n *nopLogger) Log(ctx context.Context, event core.AuditEvent) error {
+func (n *nopLogger) Log(_ context.Context, event core.AuditEvent) error {
 	return nil
 }
 

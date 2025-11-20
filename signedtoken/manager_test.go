@@ -44,7 +44,7 @@ func TestNewManager(t *testing.T) {
 
 	t.Run("accepts all options", func(t *testing.T) {
 		signer := createTestSigner(t)
-		tokenStore := memory.NewMemoryTokenStore()
+		tokenStore := memory.NewTokenStore()
 		logger := memory.NewStdoutLogger(false)
 
 		manager, err := NewManager(
@@ -109,7 +109,7 @@ func TestManager_GenerateToken(t *testing.T) {
 
 	t.Run("stores token when TokenStore configured", func(t *testing.T) {
 		signer := createTestSigner(t)
-		tokenStore := memory.NewMemoryTokenStore()
+		tokenStore := memory.NewTokenStore()
 		manager, err := NewManager(
 			WithSigner(signer),
 			WithTokenStore(tokenStore),
@@ -352,7 +352,7 @@ func TestManager_VerifyToken(t *testing.T) {
 func TestManager_RevokeToken(t *testing.T) {
 	t.Run("revokes valid token", func(t *testing.T) {
 		signer := createTestSigner(t)
-		tokenStore := memory.NewMemoryTokenStore()
+		tokenStore := memory.NewTokenStore()
 		manager, err := NewManager(
 			WithSigner(signer),
 			WithTokenStore(tokenStore),
@@ -404,7 +404,7 @@ func TestManager_RevokeToken(t *testing.T) {
 
 	t.Run("idempotent revocation", func(t *testing.T) {
 		signer := createTestSigner(t)
-		tokenStore := memory.NewMemoryTokenStore()
+		tokenStore := memory.NewTokenStore()
 		manager, err := NewManager(
 			WithSigner(signer),
 			WithTokenStore(tokenStore),
@@ -430,7 +430,7 @@ func TestManager_RevokeToken(t *testing.T) {
 func TestManager_IntegrationGenerateVerifyCycle(t *testing.T) {
 	t.Run("full generate and verify cycle", func(t *testing.T) {
 		signer := createTestSigner(t)
-		tokenStore := memory.NewMemoryTokenStore()
+		tokenStore := memory.NewTokenStore()
 		logger := memory.NewStdoutLogger(false)
 
 		manager, err := NewManager(
@@ -494,7 +494,7 @@ func TestManager_IntegrationGenerateVerifyCycle(t *testing.T) {
 
 	t.Run("token lifecycle with revocation", func(t *testing.T) {
 		signer := createTestSigner(t)
-		tokenStore := memory.NewMemoryTokenStore()
+		tokenStore := memory.NewTokenStore()
 		manager, err := NewManager(
 			WithSigner(signer),
 			WithTokenStore(tokenStore),
@@ -570,7 +570,7 @@ func TestManager_NegativeTests(t *testing.T) {
 
 	t.Run("concurrent token operations", func(t *testing.T) {
 		signer := createTestSigner(t)
-		tokenStore := memory.NewMemoryTokenStore()
+		tokenStore := memory.NewTokenStore()
 		manager, err := NewManager(
 			WithSigner(signer),
 			WithTokenStore(tokenStore),

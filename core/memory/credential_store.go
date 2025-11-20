@@ -24,7 +24,7 @@ type credential struct {
 	Data         []byte
 }
 
-// MemoryCredentialStore is an in-memory implementation of core.CredentialStore.
+// CredentialStore is an in-memory implementation of core.CredentialStore.
 //
 // This implementation is safe for concurrent use by multiple goroutines.
 //
@@ -34,25 +34,25 @@ type credential struct {
 // @risk Denial of Service: Does not implement automatic cleanup or size limits.
 // In a long-running application, this can lead to unbounded memory growth.
 // Production implementations should include TTL and storage limits.
-type MemoryCredentialStore struct {
+type CredentialStore struct {
 	mu          sync.RWMutex
 	credentials map[string]*credential // key: userID:credentialID
 }
 
-// NewMemoryCredentialStore creates a new in-memory credential store.
-func NewMemoryCredentialStore() *MemoryCredentialStore {
-	return &MemoryCredentialStore{
+// NewCredentialStore creates a new in-memory credential store.
+func NewCredentialStore() *CredentialStore {
+	return &CredentialStore{
 		credentials: make(map[string]*credential),
 	}
 }
 
 // key generates a storage key from userID and credentialID.
-func (m *MemoryCredentialStore) key(userID, credentialID string) string {
+func (m *CredentialStore) key(userID, credentialID string) string {
 	return userID + ":" + credentialID
 }
 
 // StoreCredential implements core.CredentialStore.
-func (m *MemoryCredentialStore) StoreCredential(ctx context.Context, userID string, credentialID string, data []byte) error {
+func (m *CredentialStore) StoreCredential(ctx context.Context, userID string, credentialID string, data []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -75,7 +75,7 @@ func (m *MemoryCredentialStore) StoreCredential(ctx context.Context, userID stri
 }
 
 // GetCredential implements core.CredentialStore.
-func (m *MemoryCredentialStore) GetCredential(ctx context.Context, userID string, credentialID string) ([]byte, error) {
+func (m *CredentialStore) GetCredential(ctx context.Context, userID string, credentialID string) ([]byte, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -93,7 +93,7 @@ func (m *MemoryCredentialStore) GetCredential(ctx context.Context, userID string
 }
 
 // ListCredentials implements core.CredentialStore.
-func (m *MemoryCredentialStore) ListCredentials(ctx context.Context, userID string) ([]string, error) {
+func (m *CredentialStore) ListCredentials(ctx context.Context, userID string) ([]string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -113,7 +113,7 @@ func (m *MemoryCredentialStore) ListCredentials(ctx context.Context, userID stri
 }
 
 // DeleteCredential implements core.CredentialStore.
-func (m *MemoryCredentialStore) DeleteCredential(ctx context.Context, userID string, credentialID string) error {
+func (m *CredentialStore) DeleteCredential(ctx context.Context, userID string, credentialID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -127,7 +127,7 @@ func (m *MemoryCredentialStore) DeleteCredential(ctx context.Context, userID str
 }
 
 // UpdateCredential implements core.CredentialStore.
-func (m *MemoryCredentialStore) UpdateCredential(ctx context.Context, userID string, credentialID string, data []byte) error {
+func (m *CredentialStore) UpdateCredential(ctx context.Context, userID string, credentialID string, data []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -146,14 +146,14 @@ func (m *MemoryCredentialStore) UpdateCredential(ctx context.Context, userID str
 }
 
 // Size returns the number of credentials stored. Useful for testing and metrics.
-func (m *MemoryCredentialStore) Size() int {
+func (m *CredentialStore) Size() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return len(m.credentials)
 }
 
 // Clear removes all credentials. Useful for testing.
-func (m *MemoryCredentialStore) Clear() {
+func (m *CredentialStore) Clear() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.credentials = make(map[string]*credential)

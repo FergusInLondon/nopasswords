@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewConfig(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	tests := []struct {
 		name    string
@@ -125,7 +125,7 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestConfig_Validate(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 
 	tests := []struct {
 		name    string
@@ -198,7 +198,7 @@ func TestConfig_Validate(t *testing.T) {
 }
 
 func TestWithOptions(t *testing.T) {
-	store := memory.NewMemoryCredentialStore()
+	store := memory.NewCredentialStore()
 	logger := memory.NewStdoutLogger(false)
 
 	config := &Config{}

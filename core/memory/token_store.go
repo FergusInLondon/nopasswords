@@ -16,7 +16,7 @@ type token struct {
 	Revoked   bool
 }
 
-// MemoryTokenStore is an in-memory implementation of core.TokenStore.
+// TokenStore is an in-memory implementation of core.TokenStore.
 //
 // This implementation is safe for concurrent use by multiple goroutines.
 //
@@ -26,20 +26,20 @@ type token struct {
 // @risk Denial of Service: While CleanupExpired() is provided, it must be called
 // explicitly by the implementer. Without periodic cleanup, expired tokens will
 // accumulate in memory. Consider running cleanup in a background goroutine.
-type MemoryTokenStore struct {
+type TokenStore struct {
 	mu     sync.RWMutex
 	tokens map[string]*token // key: tokenID
 }
 
-// NewMemoryTokenStore creates a new in-memory token store.
-func NewMemoryTokenStore() *MemoryTokenStore {
-	return &MemoryTokenStore{
+// NewTokenStore creates a new in-memory token store.
+func NewTokenStore() *TokenStore {
+	return &TokenStore{
 		tokens: make(map[string]*token),
 	}
 }
 
 // StoreToken implements core.TokenStore.
-func (m *MemoryTokenStore) StoreToken(ctx context.Context, tokenID string, userID string, expiresAt time.Time) error {
+func (m *TokenStore) StoreToken(ctx context.Context, tokenID string, userID string, expiresAt time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -58,7 +58,7 @@ func (m *MemoryTokenStore) StoreToken(ctx context.Context, tokenID string, userI
 }
 
 // IsTokenRevoked implements core.TokenStore.
-func (m *MemoryTokenStore) IsTokenRevoked(ctx context.Context, tokenID string) (bool, error) {
+func (m *TokenStore) IsTokenRevoked(ctx context.Context, tokenID string) (bool, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -72,7 +72,7 @@ func (m *MemoryTokenStore) IsTokenRevoked(ctx context.Context, tokenID string) (
 }
 
 // RevokeToken implements core.TokenStore.
-func (m *MemoryTokenStore) RevokeToken(ctx context.Context, tokenID string) error {
+func (m *TokenStore) RevokeToken(ctx context.Context, tokenID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -92,7 +92,7 @@ func (m *MemoryTokenStore) RevokeToken(ctx context.Context, tokenID string) erro
 }
 
 // CleanupExpired implements core.TokenStore.
-func (m *MemoryTokenStore) CleanupExpired(ctx context.Context) (int, error) {
+func (m *TokenStore) CleanupExpired(ctx context.Context) (int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -111,14 +111,14 @@ func (m *MemoryTokenStore) CleanupExpired(ctx context.Context) (int, error) {
 }
 
 // Size returns the number of tokens stored. Useful for testing and metrics.
-func (m *MemoryTokenStore) Size() int {
+func (m *TokenStore) Size() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return len(m.tokens)
 }
 
 // Clear removes all tokens. Useful for testing.
-func (m *MemoryTokenStore) Clear() {
+func (m *TokenStore) Clear() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.tokens = make(map[string]*token)
@@ -131,10 +131,10 @@ func (m *MemoryTokenStore) Clear() {
 //
 // Example usage:
 //
-//	store := NewMemoryTokenStore()
+//	store := NewTokenStore()
 //	stop := store.StartCleanupRoutine(context.Background(), 5*time.Minute)
 //	defer stop() // Stop cleanup when done
-func (m *MemoryTokenStore) StartCleanupRoutine(ctx context.Context, interval time.Duration) func() {
+func (m *TokenStore) StartCleanupRoutine(ctx context.Context, interval time.Duration) func() {
 	ticker := time.NewTicker(interval)
 	done := make(chan bool)
 

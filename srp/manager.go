@@ -395,7 +395,7 @@ func (m *Manager) computeU(A, B *big.Int) *big.Int {
 
 // computeM1 computes the client's proof M1 = H(A | B | K).
 // This is a simplified version; full RFC5054 includes H(N) XOR H(g) and other values.
-func (m *Manager) computeM1(userID string, B, A, K []byte) []byte {
+func (m *Manager) computeM1(_ string, B, A, K []byte) []byte {
 	// M1 = H(A | B | K)
 	// Note: Full RFC5054 implementation would include H(N) XOR H(g), H(I), salt
 	// For simplicity and cross-language compatibility, we use a simplified version

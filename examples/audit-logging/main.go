@@ -1,3 +1,5 @@
+// An example of the audit logging capabilities of the library; for enhanced
+// logging and context.
 package main
 
 import (

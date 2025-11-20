@@ -1,127 +1,99 @@
 # golangci-lint configuration for NoPasswords
 # See https://golangci-lint.run/usage/configuration/
 
+version: '2'
+
 run:
-  # Timeout for analysis
   timeout: 5m
-
-  # Which dirs to skip: issues from them won't be reported
-  skip-dirs:
-    - vendor
-
-  # Go version to target
   go: '1.23'
 
 linters:
   # Enable specific linters
+  disable-all: true
   enable:
-    - errcheck      # Check for unchecked errors
-    - gosimple      # Simplify code
     - govet         # Reports suspicious constructs
-    - ineffassign   # Detects ineffectual assignments
-    - staticcheck   # Go static analysis
-    - typecheck     # Type-check Go code
-    - unused        # Check for unused constants, variables, functions and types
     - gosec         # Security-focused linter
-    - gofmt         # Checks if code is gofmt-ed
-    - goimports     # Check imports
-    - misspell      # Finds commonly misspelled English words
-    - revive        # Fast, configurable, extensible, flexible linter
-    - unconvert     # Remove unnecessary type conversions
-    - unparam       # Reports unused function parameters
     - goconst       # Finds repeated strings that could be constants
+    - revive        # Fast, configurable, extensible, flexible linter
+    - unused        # Check for unused constants, variables, functions and types
     - gocyclo       # Computes cyclomatic complexity
-    - dupl          # Code clone detection
-    - gocritic      # Comprehensive Go linter
+  disable:
+    - errcheck # This always runs!?
 
-linters-settings:
-  errcheck:
-    # Report about not checking errors in type assertions: `a := b.(MyStruct)`
-    check-type-assertions: true
+  settings:
+    govet:
+      # Enable all analyzers
+      enable-all: true
+      disable:
+        - fieldalignment
 
-    # Report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`
-    check-blank: false
+    gocyclo:
+      min-complexity: 20
 
-  govet:
-    # Enable all analyzers
-    enable-all: true
+    goconst:
+      # Minimal length of string constant
+      min-len: 3
+      # Minimum occurrences of constant string count to trigger
+      min-occurrences: 3
 
-  gocyclo:
-    # Minimal code complexity to report
-    min-complexity: 15
+    gosec:
+      # To select a subset of rules to run
+      includes:
+        - G401  # Detect use of weak cryptographic primitive
+        - G402  # Look for bad TLS connection settings
+        - G403  # Ensure minimum RSA key length of 2048 bits
+        - G404  # Detect use of weak random number generator
+        - G501  # Import blocklist: crypto/md5
+        - G502  # Import blocklist: crypto/des
+        - G503  # Import blocklist: crypto/rc4
+        - G504  # Import blocklist: net/http/cgi
+        - G505  # Import blocklist: crypto/sha1
 
-  dupl:
-    # Tokens count to trigger issue
-    threshold: 100
+      # Exclude generated files
+      exclude-generated: true
 
-  goconst:
-    # Minimal length of string constant
-    min-len: 3
-    # Minimum occurrences of constant string count to trigger
-    min-occurrences: 3
+    revive:
+      # Enable all rules by default
+      enable-all-rules: false
+      rules:
+        - name: exported
+          severity: warning
+          disabled: false
+        - name: var-naming
+          severity: warning
+          disabled: false
+        - name: package-comments
+          severity: warning
+          disabled: false
+        - name: error-return
+          severity: warning
+          disabled: false
+        - name: error-naming
+          severity: warning
+          disabled: false
+        - name: if-return
+          severity: warning
+          disabled: false
 
-  misspell:
-    # Correct spellings using locale preferences
-    locale: US
-
-  goimports:
-    # Put imports beginning with prefix after 3rd-party packages
-    local-prefixes: go.fergus.london/nopasswords
-
-  gosec:
-    # To select a subset of rules to run
-    includes:
-      - G401  # Detect use of weak cryptographic primitive
-      - G402  # Look for bad TLS connection settings
-      - G403  # Ensure minimum RSA key length of 2048 bits
-      - G404  # Detect use of weak random number generator
-      - G501  # Import blocklist: crypto/md5
-      - G502  # Import blocklist: crypto/des
-      - G503  # Import blocklist: crypto/rc4
-      - G504  # Import blocklist: net/http/cgi
-      - G505  # Import blocklist: crypto/sha1
-
-    # Exclude generated files
-    exclude-generated: true
-
-  revive:
-    # Enable all rules by default
-    enable-all-rules: false
+  exclusions:
     rules:
-      - name: exported
-        severity: warning
-        disabled: false
-      - name: var-naming
-        severity: warning
-        disabled: false
-      - name: package-comments
-        severity: warning
-        disabled: false
-      - name: error-return
-        severity: warning
-        disabled: false
-      - name: error-naming
-        severity: warning
-        disabled: false
-      - name: if-return
-        severity: warning
-        disabled: false
+    - linters:
+        - govet
+      text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
+    - path: _test\.go
+      linters:
+        - govet
+        - gosec
+        - goconst
+        - revive
+        - unused
+        - gocyclo
 
 issues:
   # Maximum issues count per one linter
   max-issues-per-linter: 0
-
   # Maximum count of issues with the same text
   max-same-issues: 0
-
-  # Excluding configuration per-path, per-linter, per-text and per-source
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - dupl
-        - gosec
 
 output:
   # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate

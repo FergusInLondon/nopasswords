@@ -10,8 +10,8 @@ import (
 	"go.fergus.london/nopasswords/core"
 )
 
-func TestMemoryCredentialStore_StoreAndGet(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_StoreAndGet(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	userID := "user123"
@@ -28,8 +28,8 @@ func TestMemoryCredentialStore_StoreAndGet(t *testing.T) {
 	assert.Equal(t, data, retrieved)
 }
 
-func TestMemoryCredentialStore_StoreCredential_AlreadyExists(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_StoreCredential_AlreadyExists(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	userID := "user123"
@@ -45,16 +45,16 @@ func TestMemoryCredentialStore_StoreCredential_AlreadyExists(t *testing.T) {
 	assert.ErrorIs(t, err, core.ErrAlreadyExists)
 }
 
-func TestMemoryCredentialStore_GetCredential_NotFound(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_GetCredential_NotFound(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	_, err := store.GetCredential(ctx, "nonexistent", "cred123")
 	assert.ErrorIs(t, err, core.ErrNotFound)
 }
 
-func TestMemoryCredentialStore_ListCredentials(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_ListCredentials(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	userID := "user123"
@@ -81,8 +81,8 @@ func TestMemoryCredentialStore_ListCredentials(t *testing.T) {
 	assert.NotContains(t, creds, "cred4")
 }
 
-func TestMemoryCredentialStore_ListCredentials_Empty(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_ListCredentials_Empty(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	// List credentials for non-existent user
@@ -92,8 +92,8 @@ func TestMemoryCredentialStore_ListCredentials_Empty(t *testing.T) {
 	assert.Len(t, creds, 0)
 }
 
-func TestMemoryCredentialStore_DeleteCredential(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_DeleteCredential(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	userID := "user123"
@@ -113,16 +113,16 @@ func TestMemoryCredentialStore_DeleteCredential(t *testing.T) {
 	assert.ErrorIs(t, err, core.ErrNotFound)
 }
 
-func TestMemoryCredentialStore_DeleteCredential_NotFound(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_DeleteCredential_NotFound(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	err := store.DeleteCredential(ctx, "nonexistent", "cred123")
 	assert.ErrorIs(t, err, core.ErrNotFound)
 }
 
-func TestMemoryCredentialStore_UpdateCredential(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_UpdateCredential(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	userID := "user123"
@@ -144,16 +144,16 @@ func TestMemoryCredentialStore_UpdateCredential(t *testing.T) {
 	assert.Equal(t, updatedData, retrieved)
 }
 
-func TestMemoryCredentialStore_UpdateCredential_NotFound(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_UpdateCredential_NotFound(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	err := store.UpdateCredential(ctx, "nonexistent", "cred123", []byte("data"))
 	assert.ErrorIs(t, err, core.ErrNotFound)
 }
 
-func TestMemoryCredentialStore_DataIsolation(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_DataIsolation(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	userID := "user123"
@@ -181,8 +181,8 @@ func TestMemoryCredentialStore_DataIsolation(t *testing.T) {
 	assert.Equal(t, byte('o'), retrieved2[0])
 }
 
-func TestMemoryCredentialStore_ConcurrentAccess(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_ConcurrentAccess(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	const numGoroutines = 100
@@ -211,8 +211,8 @@ func TestMemoryCredentialStore_ConcurrentAccess(t *testing.T) {
 	assert.Greater(t, size, 0)
 }
 
-func TestMemoryCredentialStore_ConcurrentReadWrite(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_ConcurrentReadWrite(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	// Pre-populate some data
@@ -255,8 +255,8 @@ func TestMemoryCredentialStore_ConcurrentReadWrite(t *testing.T) {
 	assert.NotEmpty(t, creds)
 }
 
-func TestMemoryCredentialStore_Size(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_Size(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	assert.Equal(t, 0, store.Size())
@@ -271,8 +271,8 @@ func TestMemoryCredentialStore_Size(t *testing.T) {
 	assert.Equal(t, 1, store.Size())
 }
 
-func TestMemoryCredentialStore_Clear(t *testing.T) {
-	store := NewMemoryCredentialStore()
+func TestCredentialStore_Clear(t *testing.T) {
+	store := NewCredentialStore()
 	ctx := context.Background()
 
 	// Add some credentials
@@ -289,5 +289,5 @@ func TestMemoryCredentialStore_Clear(t *testing.T) {
 	assert.ErrorIs(t, err, core.ErrNotFound)
 }
 
-// Verify MemoryCredentialStore implements the interface
-var _ core.CredentialStore = (*MemoryCredentialStore)(nil)
+// Verify CredentialStore implements the interface
+var _ core.CredentialStore = (*CredentialStore)(nil)

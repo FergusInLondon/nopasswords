@@ -12,8 +12,8 @@ import (
 	"go.fergus.london/nopasswords/core"
 )
 
-func TestMemoryTokenStore_StoreToken(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_StoreToken(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	tokenID := "token123"
@@ -29,8 +29,8 @@ func TestMemoryTokenStore_StoreToken(t *testing.T) {
 	assert.False(t, revoked)
 }
 
-func TestMemoryTokenStore_StoreToken_AlreadyExists(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_StoreToken_AlreadyExists(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	tokenID := "token123"
@@ -45,8 +45,8 @@ func TestMemoryTokenStore_StoreToken_AlreadyExists(t *testing.T) {
 	assert.ErrorIs(t, err, core.ErrAlreadyExists)
 }
 
-func TestMemoryTokenStore_RevokeToken(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_RevokeToken(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	tokenID := "token123"
@@ -67,8 +67,8 @@ func TestMemoryTokenStore_RevokeToken(t *testing.T) {
 	assert.True(t, revoked)
 }
 
-func TestMemoryTokenStore_RevokeToken_NotFound_Idempotent(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_RevokeToken_NotFound_Idempotent(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	// Revoke non-existent token (should not error - idempotent)
@@ -81,8 +81,8 @@ func TestMemoryTokenStore_RevokeToken_NotFound_Idempotent(t *testing.T) {
 	assert.True(t, revoked)
 }
 
-func TestMemoryTokenStore_IsTokenRevoked_NotFound(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_IsTokenRevoked_NotFound(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	// Check non-existent token (should return false, not error)
@@ -91,8 +91,8 @@ func TestMemoryTokenStore_IsTokenRevoked_NotFound(t *testing.T) {
 	assert.False(t, revoked)
 }
 
-func TestMemoryTokenStore_RevokeToken_Idempotent(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_RevokeToken_Idempotent(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	tokenID := "token123"
@@ -115,8 +115,8 @@ func TestMemoryTokenStore_RevokeToken_Idempotent(t *testing.T) {
 	assert.True(t, revoked)
 }
 
-func TestMemoryTokenStore_CleanupExpired(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_CleanupExpired(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	now := time.Now()
@@ -148,8 +148,8 @@ func TestMemoryTokenStore_CleanupExpired(t *testing.T) {
 	assert.False(t, revoked)
 }
 
-func TestMemoryTokenStore_CleanupExpired_NoExpired(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_CleanupExpired_NoExpired(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	now := time.Now()
@@ -165,8 +165,8 @@ func TestMemoryTokenStore_CleanupExpired_NoExpired(t *testing.T) {
 	assert.Equal(t, 2, store.Size())
 }
 
-func TestMemoryTokenStore_CleanupExpired_Empty(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_CleanupExpired_Empty(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	// Cleanup empty store
@@ -175,8 +175,8 @@ func TestMemoryTokenStore_CleanupExpired_Empty(t *testing.T) {
 	assert.Equal(t, 0, count)
 }
 
-func TestMemoryTokenStore_ConcurrentAccess(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_ConcurrentAccess(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	const numGoroutines = 100
@@ -206,8 +206,8 @@ func TestMemoryTokenStore_ConcurrentAccess(t *testing.T) {
 	assert.Greater(t, size, 0)
 }
 
-func TestMemoryTokenStore_ConcurrentRevokeAndCheck(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_ConcurrentRevokeAndCheck(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	// Pre-populate tokens
@@ -254,8 +254,8 @@ func TestMemoryTokenStore_ConcurrentRevokeAndCheck(t *testing.T) {
 	}
 }
 
-func TestMemoryTokenStore_Size(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_Size(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	assert.Equal(t, 0, store.Size())
@@ -268,8 +268,8 @@ func TestMemoryTokenStore_Size(t *testing.T) {
 	assert.Equal(t, 2, store.Size())
 }
 
-func TestMemoryTokenStore_Clear(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_Clear(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	expiresAt := time.Now().Add(1 * time.Hour)
@@ -289,8 +289,8 @@ func TestMemoryTokenStore_Clear(t *testing.T) {
 	assert.False(t, revoked) // Not found = not revoked
 }
 
-func TestMemoryTokenStore_StartCleanupRoutine(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_StartCleanupRoutine(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	now := time.Now()
@@ -310,8 +310,8 @@ func TestMemoryTokenStore_StartCleanupRoutine(t *testing.T) {
 	assert.Equal(t, 1, store.Size())
 }
 
-func TestMemoryTokenStore_StartCleanupRoutine_Stop(t *testing.T) {
-	store := NewMemoryTokenStore()
+func TestTokenStore_StartCleanupRoutine_Stop(t *testing.T) {
+	store := NewTokenStore()
 	ctx := context.Background()
 
 	// Start cleanup routine
@@ -331,5 +331,5 @@ func TestMemoryTokenStore_StartCleanupRoutine_Stop(t *testing.T) {
 	assert.Equal(t, 1, store.Size())
 }
 
-// Verify MemoryTokenStore implements the interface
-var _ core.TokenStore = (*MemoryTokenStore)(nil)
+// Verify TokenStore implements the interface
+var _ core.TokenStore = (*TokenStore)(nil)
