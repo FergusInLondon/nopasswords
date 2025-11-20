@@ -285,7 +285,10 @@ export class SRPClient {
    * SHA-256 hash function using WebCrypto.
    */
   private async hashSHA256(data: Uint8Array): Promise<Uint8Array> {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    // Yes, it accepts `new T(instance of T)` but doesn't accept `T`.
+    // Make it make sense, Typescript!
+    // TODO: Actually fix that abomination.
+    const hashBuffer = await crypto.subtle.digest('SHA-256', new Uint8Array(data));
     return new Uint8Array(hashBuffer);
   }
 
