@@ -79,10 +79,10 @@ make examples
 
 ```bash
 # Start development environment
-docker-compose up dev
+docker compose up dev
 
 # Run tests in container
-docker-compose run test
+docker compose run test
 
 # Run WebAuthn example
 docker compose up webauthn-demo

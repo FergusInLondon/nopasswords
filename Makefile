@@ -1,5 +1,5 @@
 .PHONY: help test test-verbose test-coverage test-race lint fmt vet tidy clean deps check build \
-        client-install client-build client-lint client-clean \
+        client-install client client-build client-lint client-clean \
         examples dev all ci
 
 # Default target
@@ -116,6 +116,12 @@ client-build:
 		cd $$dir && npm run build && cd ..; \
 	done
 
+client: client-clean client-install client-build
+	cp client/dist/nopasswords-webauthn.js.map examples/webauthn-demo/static/nopasswords-webauthn.js.map
+	cp client/dist/nopasswords-webauthn.js examples/webauthn-demo/static/nopasswords-webauthn.js
+	cp client-srp/dist/nopasswords-srp.js.map examples/srp-demo/static/nopasswords-srp.js.map
+	cp client-srp/dist/nopasswords-srp.js examples/srp-demo/static/nopasswords-srp.js
+
 ## client-lint: Lint all client code
 client-lint:
 	@echo "Linting client code..."
@@ -137,7 +143,7 @@ client-clean:
 	done
 
 ## examples: Build all examples
-examples:
+examples: client
 	@echo "Building examples..."
 	@for dir in $(EXAMPLE_DIRS); do \
 		echo "Building $$dir..."; \
