@@ -9,6 +9,8 @@ on:
 # @risk Elevation of Privilege: Limit permissions to minimum required
 # @mitigation: Use explicit permissions, avoid GITHUB_TOKEN with write access unless needed
 permissions:
+  security-events: write
+  actions: read
   contents: read
   pull-requests: read
   checks: write
