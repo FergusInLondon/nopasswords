@@ -140,7 +140,7 @@ func (s *server) handleRegisterFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionData, ok := s.sessions.get(cookie.Value)
+	_, ok := s.sessions.get(cookie.Value)
 	if !ok {
 		http.Error(w, "Invalid session", http.StatusUnauthorized)
 		return

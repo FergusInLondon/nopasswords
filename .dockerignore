@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# CI/CD
+.github
+
+# Dependencies
+client/node_modules
+client-srp/node_modules
+vendor
+
+# Build artifacts
+client/dist
+client-srp/dist
+coverage
+*.out
+*.test
+examples/*/webauthn-demo
+examples/*/srp-demo
+examples/*/audit-logging
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Documentation (keep in image)
+# README.md
+# CONTRIBUTING.md
+# LICENSE

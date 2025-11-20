@@ -290,7 +290,7 @@ func TestManager_FinishAuthentication_SessionExpired(t *testing.T) {
 	manager, err := NewManager(
 		WithCredentialStore(store),
 		WithGroup(3),
-		WithSessionTimeout(1 * time.Millisecond), // Very short timeout
+		WithSessionTimeout(1*time.Millisecond), // Very short timeout
 	)
 	require.NoError(t, err)
 

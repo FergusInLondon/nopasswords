@@ -1,0 +1,169 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, 'claude/**' ]
+  pull_request:
+    branches: [ main ]
+
+# @risk Elevation of Privilege: Limit permissions to minimum required
+# @mitigation: Use explicit permissions, avoid GITHUB_TOKEN with write access unless needed
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  # Go linting and testing
+  go-test:
+    name: Go Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.23']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+        cache: true
+
+    - name: Download dependencies
+      run: make deps
+
+    - name: Run go fmt
+      run: make fmt
+
+    - name: Run go vet
+      run: make vet
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: v1.61.0
+        args: --timeout=5m
+
+    - name: Run tests
+      run: make test
+
+    - name: Run tests with race detector
+      run: make test-race
+
+    - name: Generate coverage report
+      run: make test-coverage
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage/coverage.out
+        flags: unittests
+        name: codecov-go
+      # @risk Information Disclosure: Don't fail build if codecov upload fails
+      # @mitigation: Continue on error to prevent external service failures from blocking CI
+      continue-on-error: true
+
+  # Client (TypeScript) linting and building
+  client-test:
+    name: Client Build & Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['20']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: |
+          client/package-lock.json
+          client-srp/package-lock.json
+
+    - name: Install client dependencies
+      run: make client-install
+
+    - name: Lint client code
+      run: make client-lint
+
+    - name: Build client libraries
+      run: make client-build
+
+    - name: Check client artifacts
+      run: |
+        test -f client/dist/nopasswords-webauthn.js
+        test -f client-srp/dist/nopasswords-srp.js
+
+  # Build examples to ensure they compile
+  examples:
+    name: Build Examples
+    runs-on: ubuntu-latest
+    needs: [go-test, client-test]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        cache: true
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: |
+          client/package-lock.json
+          client-srp/package-lock.json
+
+    - name: Install dependencies
+      run: make deps client-install
+
+    - name: Build client libraries
+      run: make client-build
+
+    - name: Build examples
+      run: make examples
+
+    - name: Verify example binaries
+      run: |
+        test -f examples/webauthn-demo/webauthn-demo
+        test -f examples/srp-demo/srp-demo
+        test -f examples/audit-logging/audit-logging
+
+  # Security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        # @risk Tampering: Scan for known vulnerabilities in dependencies
+        # @mitigation: Use Trivy to detect CVEs in Go modules and npm packages
+      continue-on-error: true
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+      if: always()
+      continue-on-error: true

@@ -138,13 +138,15 @@ type ServerSession struct {
 	Group int `json:"group"`
 
 	// b is the server's private ephemeral value (kept secret)
-	b *big.Int `json:"b"`
+	// @risk Information Disclosure: Never serialize or expose private ephemeral value
+	b *big.Int
 
 	// B is the server's public ephemeral value (sent to client)
 	B *big.Int `json:"B"`
 
 	// v is the verifier value from storage
-	v *big.Int `json:"v"`
+	// @risk Information Disclosure: Never serialize or expose verifier directly
+	v *big.Int
 
 	// CreatedAt records when this session was created
 	CreatedAt time.Time `json:"created_at"`

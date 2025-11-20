@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Development environment with all dependencies
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount source code for live development
+      - .:/workspace
+      # Persist Go module cache
+      - go-pkg-cache:/go/pkg
+      # Persist npm cache
+      - npm-cache:/root/.npm
+    working_dir: /workspace
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+    environment:
+      - CGO_ENABLED=1
+
+  # Testing environment with browsers for E2E tests
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      - .:/workspace
+      - go-pkg-cache:/go/pkg
+      - npm-cache:/root/.npm
+    working_dir: /workspace
+    environment:
+      - CGO_ENABLED=1
+      - CI=true
+    command: make ci
+
+  # Example: WebAuthn demo server
+  # @risk Information Disclosure: Examples are for development only, not production
+  # @mitigation: Documentation clearly states examples are not production-ready
+  webauthn-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/workspace
+    working_dir: /workspace/examples/webauthn-demo
+    ports:
+      - "8080:8080"
+    command: /bin/bash -c "go build -o webauthn-demo . && ./webauthn-demo"
+    environment:
+      - WEBAUTHN_RP_ID=localhost
+      - WEBAUTHN_RP_ORIGINS=http://localhost:8080
+
+  # Example: SRP demo server
+  srp-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/workspace
+    working_dir: /workspace/examples/srp-demo
+    ports:
+      - "8081:8081"
+    command: /bin/bash -c "go build -o srp-demo . && ./srp-demo"
+
+volumes:
+  go-pkg-cache:
+  npm-cache:

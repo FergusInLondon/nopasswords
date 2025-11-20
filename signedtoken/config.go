@@ -48,10 +48,11 @@ type Option func(*Config)
 // For most use cases, use NewHMACSignerSHA256 with a strong random key.
 //
 // Example:
-//   key := make([]byte, 32)
-//   rand.Read(key)
-//   signer, _ := NewHMACSignerSHA256(key)
-//   manager := NewManager(WithSigner(signer))
+//
+//	key := make([]byte, 32)
+//	rand.Read(key)
+//	signer, _ := NewHMACSignerSHA256(key)
+//	manager := NewManager(WithSigner(signer))
 func WithSigner(signer Signer) Option {
 	return func(c *Config) {
 		c.Signer = signer
@@ -64,7 +65,8 @@ func WithSigner(signer Signer) Option {
 // The maximum allowed lifetime is MaxTokenLifetime (24 hours).
 //
 // Example:
-//   manager := NewManager(WithDefaultLifetime(30 * time.Minute))
+//
+//	manager := NewManager(WithDefaultLifetime(30 * time.Minute))
 func WithDefaultLifetime(lifetime time.Duration) Option {
 	return func(c *Config) {
 		c.DefaultLifetime = lifetime
@@ -80,9 +82,10 @@ func WithDefaultLifetime(lifetime time.Duration) Option {
 // This reduces the risk of information disclosure when tokens appear in URLs.
 //
 // Example:
-//   manager := NewManager(WithOpaqueIDs(true))
-//   // Use UUIDs or random strings as user IDs instead of email addresses
-//   token, _ := manager.GenerateToken(ctx, "550e8400-e29b-41d4-a716-446655440000", nil)
+//
+//	manager := NewManager(WithOpaqueIDs(true))
+//	// Use UUIDs or random strings as user IDs instead of email addresses
+//	token, _ := manager.GenerateToken(ctx, "550e8400-e29b-41d4-a716-446655440000", nil)
 func WithOpaqueIDs(useOpaque bool) Option {
 	return func(c *Config) {
 		c.UseOpaqueIDs = useOpaque
@@ -95,8 +98,9 @@ func WithOpaqueIDs(useOpaque bool) Option {
 // Provide a TokenStore implementation if you need to revoke tokens before they expire.
 //
 // Example:
-//   store := memory.NewMemoryTokenStore()
-//   manager := NewManager(WithTokenStore(store))
+//
+//	store := memory.NewMemoryTokenStore()
+//	manager := NewManager(WithTokenStore(store))
 func WithTokenStore(store core.TokenStore) Option {
 	return func(c *Config) {
 		c.TokenStore = store
@@ -108,8 +112,9 @@ func WithTokenStore(store core.TokenStore) Option {
 // If not provided, a no-op logger will be used (events are not logged).
 //
 // Example:
-//   logger := memory.NewStdoutLogger()
-//   manager := NewManager(WithAuditLogger(logger))
+//
+//	logger := memory.NewStdoutLogger()
+//	manager := NewManager(WithAuditLogger(logger))
 func WithAuditLogger(logger core.AuditLogger) Option {
 	return func(c *Config) {
 		c.AuditLogger = logger

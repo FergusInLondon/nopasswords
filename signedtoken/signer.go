@@ -84,11 +84,12 @@ type HMACSignerSHA256 struct {
 // security. Keys should be randomly generated and kept secret.
 //
 // Example key generation:
-//   key := make([]byte, 32)
-//   if _, err := rand.Read(key); err != nil {
-//       // handle error
-//   }
-//   signer, err := NewHMACSignerSHA256(key)
+//
+//	key := make([]byte, 32)
+//	if _, err := rand.Read(key); err != nil {
+//	    // handle error
+//	}
+//	signer, err := NewHMACSignerSHA256(key)
 //
 // Returns ErrWeakSigningKey if the key is too short.
 func NewHMACSignerSHA256(key []byte) (*HMACSignerSHA256, error) {

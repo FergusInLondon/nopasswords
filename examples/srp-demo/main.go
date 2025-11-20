@@ -172,8 +172,8 @@ func handleSession(sessions *sessionStore) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"authenticated": true,
-			"user_id":       userID,
+			"authenticated":      true,
+			"user_id":            userID,
 			"session_key_length": len(session.SessionKey),
 		})
 	}

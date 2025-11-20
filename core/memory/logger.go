@@ -124,10 +124,10 @@ func (s *StderrLogger) Log(ctx context.Context, event core.AuditEvent) error {
 //
 // This implementation is safe for concurrent use by multiple goroutines.
 type BufferedLogger struct {
-	mu       sync.Mutex
-	logger   core.AuditLogger
-	buffer   []core.AuditEvent
-	maxSize  int
+	mu        sync.Mutex
+	logger    core.AuditLogger
+	buffer    []core.AuditEvent
+	maxSize   int
 	autoFlush bool
 }
 
@@ -137,9 +137,9 @@ type BufferedLogger struct {
 // The underlying logger receives the batched events.
 func NewBufferedLogger(logger core.AuditLogger, maxSize int) *BufferedLogger {
 	return &BufferedLogger{
-		logger:   logger,
-		buffer:   make([]core.AuditEvent, 0, maxSize),
-		maxSize:  maxSize,
+		logger:    logger,
+		buffer:    make([]core.AuditEvent, 0, maxSize),
+		maxSize:   maxSize,
 		autoFlush: true,
 	}
 }

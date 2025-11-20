@@ -66,7 +66,8 @@ type Option func(*Config) error
 // Default: 3 (2048-bit)
 //
 // Example:
-//   manager := NewManager(WithGroup(4)) // Use 3072-bit group
+//
+//	manager := NewManager(WithGroup(4)) // Use 3072-bit group
 func WithGroup(groupID int) Option {
 	return func(c *Config) error {
 		if groupID < 3 || groupID > 5 {
@@ -83,7 +84,8 @@ func WithGroup(groupID int) Option {
 // Default: 5 minutes
 //
 // Example:
-//   manager := NewManager(WithSessionTimeout(10 * time.Minute))
+//
+//	manager := NewManager(WithSessionTimeout(10 * time.Minute))
 func WithSessionTimeout(timeout time.Duration) Option {
 	return func(c *Config) error {
 		if timeout <= 0 {
@@ -103,7 +105,8 @@ func WithSessionTimeout(timeout time.Duration) Option {
 // Default: 32 bytes (256 bits)
 //
 // Example:
-//   manager := NewManager(WithSaltLength(32))
+//
+//	manager := NewManager(WithSaltLength(32))
 func WithSaltLength(length int) Option {
 	return func(c *Config) error {
 		if length < MinSaltLength {
@@ -122,8 +125,9 @@ func WithSaltLength(length int) Option {
 // Required: Must be provided to store SRP verifiers.
 //
 // Example:
-//   store := memory.NewMemoryCredentialStore()
-//   manager := NewManager(WithCredentialStore(store))
+//
+//	store := memory.NewMemoryCredentialStore()
+//	manager := NewManager(WithCredentialStore(store))
 func WithCredentialStore(store core.CredentialStore) Option {
 	return func(c *Config) error {
 		if store == nil {
@@ -139,8 +143,9 @@ func WithCredentialStore(store core.CredentialStore) Option {
 // Optional: Defaults to no-op logger if not provided.
 //
 // Example:
-//   logger := memory.NewStdoutLogger()
-//   manager := NewManager(WithAuditLogger(logger))
+//
+//	logger := memory.NewStdoutLogger()
+//	manager := NewManager(WithAuditLogger(logger))
 func WithAuditLogger(logger core.AuditLogger) Option {
 	return func(c *Config) error {
 		if logger == nil {
