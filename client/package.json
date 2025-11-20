@@ -1,0 +1,24 @@
+{
+  "name": "@nopasswords/webauthn-client",
+  "version": "0.1.0",
+  "description": "WebAuthn client library for NoPasswords",
+  "main": "dist/nopasswords-webauthn.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && node build.js",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "webauthn",
+    "fido2",
+    "authentication",
+    "passwordless"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.2"
+  }
+}
