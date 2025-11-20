@@ -274,15 +274,15 @@
         </div>
     </div>
 
-    <script src="nopasswords-srp.js"></script>
+    <script src="nopasswords.min.js"></script>
     <script>
-        const API_BASE = 'http://localhost:8081';
-        const GROUP = 3; // 2048-bit group
-
         // Initialize the SRP client
         const srpClient = new NoPasswordsSRP.SRPClient({
-            group: GROUP,
-            baseURL: API_BASE
+            group: 3,
+            baseURL: 'http://localhost:8081',
+            registrationPath: '/api/srp/register',
+            initiateAuthPath: '/api/srp/authenticate/begin',
+            completeAuthPath: '/api/srp/authenticate/finish'
         });
 
         function switchTab(tab) {

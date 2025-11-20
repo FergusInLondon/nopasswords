@@ -1,8 +1,8 @@
 {
-  "name": "@nopasswords/webauthn-client",
+  "name": "@nopasswords/client",
   "version": "0.1.0",
-  "description": "WebAuthn client library for NoPasswords",
-  "main": "dist/nopasswords-webauthn.js",
+  "description": "Client library for NoPasswords",
+  "main": "dist/nopasswords.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc && node build.js",
@@ -13,6 +13,9 @@
     "format:check": "prettier --check 'src/**/*.ts'"
   },
   "keywords": [
+    "srp",
+    "secure-remote-password",
+    "zero-knowledge",
     "webauthn",
     "fido2",
     "authentication",
