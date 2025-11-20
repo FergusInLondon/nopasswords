@@ -1,7 +1,7 @@
 # Testing Dockerfile for NoPasswords E2E tests
 # Includes Playwright and browsers for WebAuthn testing
 
-FROM mcr.microsoft.com/playwright:v1.49.1-jammy
+FROM mcr.microsoft.com/playwright:v1.56.1-jammy
 
 # @risk Tampering: Using official Microsoft Playwright image to prevent supply chain attacks
 # @mitigation: Pin specific image version, use official trusted registry
