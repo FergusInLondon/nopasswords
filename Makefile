@@ -20,10 +20,8 @@ COVERAGE_DIR=coverage
 COVERAGE_PROFILE=$(COVERAGE_DIR)/coverage.out
 COVERAGE_HTML=$(COVERAGE_DIR)/coverage.html
 
-# Client directories
-CLIENT_DIRS=client client-srp
-
 # Example directories
+BUILT_CLIENT=client/dist/nopasswords.js
 EXAMPLE_DIRS=examples/webauthn-demo examples/srp-demo examples/audit-logging
 
 ## help: Display this help message
@@ -103,44 +101,33 @@ clean:
 ## client-install: Install client dependencies
 client-install:
 	@echo "Installing client dependencies..."
-	@for dir in $(CLIENT_DIRS); do \
-		echo "Installing dependencies in $$dir..."; \
-		cd $$dir && npm install && cd ..; \
-	done
+	cd client && npm install && cd ..
 
-## client-build: Build all client libraries
+## client-build: Build all client library
 client-build:
-	@echo "Building client libraries..."
-	@for dir in $(CLIENT_DIRS); do \
-		echo "Building $$dir..."; \
-		cd $$dir && npm run build && cd ..; \
-	done
+	@echo "Building client library..."
+	cd client && npm run build && cd ..
 
 client: client-clean client-install client-build
-	cp client/dist/nopasswords-webauthn.js.map examples/webauthn-demo/static/nopasswords-webauthn.js.map
-	cp client/dist/nopasswords-webauthn.js examples/webauthn-demo/static/nopasswords-webauthn.js
-	cp client-srp/dist/nopasswords-srp.js.map examples/srp-demo/static/nopasswords-srp.js.map
-	cp client-srp/dist/nopasswords-srp.js examples/srp-demo/static/nopasswords-srp.js
+	cp ${BUILT_CLIENT}.map examples/webauthn-demo/static/nopasswords.min.js.map
+	cp ${BUILT_CLIENT} examples/webauthn-demo/static/nopasswords.min.js
+	cp ${BUILT_CLIENT}.map examples/srp-demo/static/nopasswords.min.js.map
+	cp ${BUILT_CLIENT} examples/srp-demo/static/nopasswords.min.js
 
 ## client-lint: Lint all client code
 client-lint:
 	@echo "Linting client code..."
-	@for dir in $(CLIENT_DIRS); do \
-		if [ -f "$$dir/package.json" ] && grep -q "\"lint\"" "$$dir/package.json"; then \
-			echo "Linting $$dir..."; \
-			cd $$dir && npm run lint && cd ..; \
-		else \
-			echo "No lint script in $$dir, skipping..."; \
-		fi; \
-	done
+	if [ -f "client/package.json" ] && grep -q "\"lint\"" "client/package.json"; then \
+		echo "Linting client..."; \
+		cd client && npm run lint && cd ..; \
+	else \
+		echo "No lint script in client, skipping..."; \
+	fi; \
 
 ## client-clean: Clean client build artifacts
 client-clean:
 	@echo "Cleaning client artifacts..."
-	@for dir in $(CLIENT_DIRS); do \
-		echo "Cleaning $$dir..."; \
-		rm -rf $$dir/dist $$dir/node_modules $$dir/package-lock.json; \
-	done
+	rm -rf client/dist client/node_modules client/package-lock.json; \
 
 ## examples: Build all examples
 examples: client

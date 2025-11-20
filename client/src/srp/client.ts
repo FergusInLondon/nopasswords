@@ -51,14 +51,14 @@ export class SRPClient {
    * This computes the verifier client-side and sends it to the server along with the salt.
    * The server stores the verifier but never sees the password.
    *
-   * @param userID - User identifier (e.g., email)
+   * @param identifier - User identifier (e.g., email)
    * @param password - User's password
    * @returns Registration result
    *
    * @mitigation Information Disclosure: Password never leaves the client.
    * @mitigation Spoofing: Verifier cannot be used to recover the password.
    */
-  async register(userID: string, password: string): Promise<RegistrationResult> {
+  async register(identifier: string, password: string): Promise<RegistrationResult> {
     try {
       // Get group parameters
       const group = getGroup(this.config.group);
@@ -67,26 +67,26 @@ export class SRPClient {
       const salt = new Uint8Array(32);
       crypto.getRandomValues(salt);
 
-      // Compute x = H(salt | H(userID | ":" | password))
-      const x = await this.computeX(userID, password, salt);
+      // Compute x = H(salt | H(identifier | ":" | password))
+      const x = await this.computeX(identifier, password, salt);
 
       // Compute verifier v = g^x mod N
       const v = this.modPow(group.g, x, group.N);
 
       // Prepare registration request
       const request: RegistrationRequest = {
-        user_id: userID,
+        identifier: identifier,
         salt: this.bytesToBase64(salt),
         verifier: this.bytesToBase64(bigIntToBytes(v)),
         group: this.config.group,
       };
 
       // Send registration request to server
-      const response = await this.post<RegistrationResponse>('/api/srp/register', request);
+      const response = await this.post<RegistrationResponse>(this.config.registrationPath, request);
 
       return {
         success: response.success,
-        userID: response.user_id,
+        identifier: response.identifier,
         error: response.error,
       };
     } catch (error) {
@@ -107,24 +107,23 @@ export class SRPClient {
    * 4. Verify server's proof (M2)
    * 5. Derive session key (K)
    *
-   * @param userID - User identifier
+   * @param identifier - User identifier
    * @param password - User's password
    * @returns Authentication result with session key
    *
    * @mitigation Tampering: Protocol ensures both parties have the correct password.
    * @mitigation Information Disclosure: Session key is derived, not transmitted.
    */
-  async authenticate(userID: string, password: string): Promise<AuthenticationResult> {
+  async authenticate(identifier: string, password: string): Promise<AuthenticationResult> {
     try {
       // Step 1: Begin authentication - get salt and B from server
       const beginRequest: AuthenticationBeginRequest = {
-        user_id: userID,
+        identifier: identifier,
         group: this.config.group,
       };
 
       const beginResponse = await this.post<AuthenticationBeginResponse>(
-        '/api/srp/authenticate/begin',
-        beginRequest
+        this.config.initiateAuthPath, beginRequest
       );
 
       const salt = this.base64ToBytes(beginResponse.salt);
@@ -133,8 +132,8 @@ export class SRPClient {
       // Get group parameters
       const group = getGroup(beginResponse.group);
 
-      // Compute x = H(salt | H(userID | ":" | password))
-      const x = await this.computeX(userID, password, salt);
+      // Compute x = H(salt | H(identifier | ":" | password))
+      const x = await this.computeX(identifier, password, salt);
 
       // Generate client's private ephemeral value a (256 bits)
       // @mitigation Elevation of Privilege: Cryptographically random a prevents prediction
@@ -171,14 +170,13 @@ export class SRPClient {
 
       // Step 2: Send A and M1 to server
       const finishRequest: AuthenticationFinishRequest = {
-        user_id: userID,
+        identifier: identifier,
         a: this.bytesToBase64(bigIntToBytes(A)),
         m1: this.bytesToBase64(M1),
       };
 
       const finishResponse = await this.post<AuthenticationFinishResponse>(
-        '/api/srp/authenticate/finish',
-        finishRequest
+        this.config.completeAuthPath, finishRequest
       );
 
       if (!finishResponse.success) {
@@ -215,13 +213,13 @@ export class SRPClient {
   }
 
   /**
-   * Compute x = H(salt | H(userID | ":" | password))
+   * Compute x = H(salt | H(identifier | ":" | password))
    *
    * This is the private key derivation from the password.
    */
-  private async computeX(userID: string, password: string, salt: Uint8Array): Promise<bigint> {
-    // Inner hash: H(userID | ":" | password)
-    const innerText = userID + ':' + password;
+  private async computeX(identifier: string, password: string, salt: Uint8Array): Promise<bigint> {
+    // Inner hash: H(identifier | ":" | password)
+    const innerText = identifier + ':' + password;
     const innerBytes = new TextEncoder().encode(innerText);
     const innerHash = await this.hashSHA256(innerBytes);
 
@@ -334,18 +332,15 @@ export class SRPClient {
    * Convert bytes to Base64 (URL-safe).
    */
   private bytesToBase64(bytes: Uint8Array): string {
-    const base64 = btoa(String.fromCharCode(...bytes));
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return btoa(String.fromCharCode(...bytes));
   }
 
   /**
    * Convert Base64 (URL-safe) to bytes.
    */
   private base64ToBytes(base64: string): Uint8Array {
-    // Convert URL-safe Base64 to standard Base64
-    const standardBase64 = base64.replace(/-/g, '+').replace(/_/g, '/');
     // Add padding if needed
-    const padded = standardBase64 + '===='.slice(0, (4 - (standardBase64.length % 4)) % 4);
+    const padded = base64 + '===='.slice(0, (4 - (base64.length % 4)) % 4);
     const binary = atob(padded);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {

@@ -12,13 +12,19 @@ export interface SRPConfig {
   group: 3 | 4 | 5;
   /** Base URL for API endpoints */
   baseURL: string;
+  /** Path to the Registration Endpoint */
+  registrationPath: string;
+  /** Path to initiate authentication. */
+  initiateAuthPath: string;
+  /** Path to complete authentication. */
+  completeAuthPath: string;
 }
 
 /**
  * Registration request sent to the server.
  */
 export interface RegistrationRequest {
-  user_id: string;
+  identifier: string;
   salt: string;  // Base64-encoded
   verifier: string;  // Base64-encoded
   group: number;
@@ -29,7 +35,7 @@ export interface RegistrationRequest {
  */
 export interface RegistrationResponse {
   success: boolean;
-  user_id?: string;
+  identifier?: string;
   error?: string;
 }
 
@@ -37,7 +43,7 @@ export interface RegistrationResponse {
  * Authentication begin request sent to the server.
  */
 export interface AuthenticationBeginRequest {
-  user_id: string;
+  identifier: string;
   group?: number;
 }
 
@@ -54,7 +60,7 @@ export interface AuthenticationBeginResponse {
  * Authentication finish request sent to the server.
  */
 export interface AuthenticationFinishRequest {
-  user_id: string;
+  identifier: string;
   a: string;  // Base64-encoded (client's public ephemeral value A)
   m1: string;  // Base64-encoded (client's proof)
 }
@@ -73,7 +79,7 @@ export interface AuthenticationFinishResponse {
  */
 export interface RegistrationResult {
   success: boolean;
-  userID?: string;
+  identifier?: string;
   error?: string;
 }
 

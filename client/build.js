@@ -3,9 +3,9 @@ const esbuild = require('esbuild');
 esbuild.build({
   entryPoints: ['dist/index.js'],
   bundle: true,
-  outfile: 'dist/nopasswords-webauthn.js',
+  outfile: 'dist/nopasswords.js',
   format: 'iife',
-  globalName: 'NoPasswordsWebAuthn',
+  globalName: 'NoPasswords',
   minify: true,
   sourcemap: true,
 }).catch(() => process.exit(1));

@@ -84,7 +84,6 @@ jobs:
         cache: 'npm'
         cache-dependency-path: |
           client/package-lock.json
-          client-srp/package-lock.json
 
     - name: Install client dependencies
       run: make client-install
@@ -97,8 +96,7 @@ jobs:
 
     - name: Check client artifacts
       run: |
-        test -f client/dist/nopasswords-webauthn.js
-        test -f client-srp/dist/nopasswords-srp.js
+        test -f client/dist/nopasswords.js
 
   # Build examples to ensure they compile
   examples:
