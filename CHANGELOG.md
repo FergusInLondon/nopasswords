@@ -829,6 +829,224 @@ No new external dependencies! All implementations use:
 
 ---
 
+### 2025-11-20 - Feature 5: Audit Logging Interface
+
+**Status**: Completed
+
+**Objective**: Expand the audit logging interface established in Feature 1 into a comprehensive, production-ready system. Provide multiple logger implementations, event construction helpers, and filtering capabilities while maintaining the library's unopinionated design philosophy.
+
+**Changes Implemented**:
+
+1. **Audit Event Helpers** (`core/audit_helpers.go`)
+   - `NewAuditEvent()`: Convenience function for creating events with auto-generated UUID and timestamp
+   - `AuditEventBuilder`: Fluent interface for constructing audit events with method chaining
+   - `HTTPRequestContext()`: Extract IP address, user agent, HTTP method, and path from HTTP requests
+   - `HTTPContextToAuditEvent()`: Apply HTTP context directly to an AuditEventBuilder
+   - `ExtractUserIDFromContext()`: Helper for extracting user IDs from context.Context
+   - Handles X-Forwarded-For and X-Real-IP headers for proper IP address extraction behind proxies
+
+2. **File Logger** (`core/memory/file_logger.go`)
+   - JSON Lines format (one event per line, compact JSON)
+   - Optional pretty-printing for debugging (`WithPrettyPrint()`)
+   - Automatic directory creation
+   - Thread-safe with mutex protection
+   - `Sync()` method for explicit flushing to disk
+   - Append mode (preserves existing logs)
+   - Note: No automatic rotation (use external tools like logrotate)
+
+3. **Multi-Logger** (`core/memory/multi_logger.go`)
+   - Fans out events to multiple loggers simultaneously
+   - Collects errors from all loggers (continues logging even if one fails)
+   - Returns `MultiLoggerError` with all errors for inspection
+   - `AddLogger()` method for dynamic logger addition
+
+4. **Filtered Logger** (`core/memory/multi_logger.go`)
+   - `FilteredLogger`: Wraps another logger and applies filtering logic
+   - Predefined filter functions:
+     - `EventTypeFilter()` - Include specific event types
+     - `ExcludeEventTypeFilter()` - Exclude specific event types
+     - `OutcomeFilter()` - Filter by outcome (success/failure/error)
+     - `MethodFilter()` - Filter by authentication method
+     - `UserFilter()` - Filter by user ID
+   - Filter combinators:
+     - `AndFilter()` - All conditions must match
+     - `OrFilter()` - At least one condition must match
+     - `NotFilter()` - Invert a filter
+   - Useful for routing different event types to different destinations
+
+5. **Async Logger** (`core/memory/multi_logger.go`)
+   - Non-blocking logging via background goroutine
+   - Configurable buffer size
+   - `Close()` method flushes pending events on shutdown
+   - Automatic start on first `Log()` call
+   - Thread-safe with proper cleanup handling
+   - Prevents audit logging from blocking authentication operations
+
+6. **Comprehensive Testing** (`core/audit_helpers_test.go`, `core/memory/*_test.go`)
+   - Unit tests for all helper functions and builders
+   - HTTP context extraction tests (including proxy headers)
+   - File logger tests: creation, appending, concurrent access, pretty-printing
+   - Multi-logger tests: fan-out, error handling, dynamic addition
+   - Filtered logger tests: all filter types, combinators, complex logic
+   - Async logger tests: buffering, flushing, concurrent access, graceful shutdown
+   - Integration test demonstrating complete flow with HTTP request context
+   - Benchmarks for event construction helpers
+
+7. **Example Implementation** (`examples/audit-logging/`)
+   - Comprehensive example demonstrating all features:
+     - Simple stdout logging
+     - File-based logging
+     - Multi-logger (fan-out to multiple destinations)
+     - Filtered logging (failures only)
+     - Async logging (non-blocking)
+     - Complex filtering (AND/OR logic)
+     - AuditEventBuilder usage
+   - Production recommendations in README:
+     - External log rotation with logrotate
+     - Async logging for high-throughput
+     - Multiple destination patterns
+     - Custom logger integration
+   - Security considerations documented
+   - Event types and outcomes reference
+
+**Security Risks Addressed**:
+
+- **@risk Information Disclosure** (Accidentally logging sensitive data)
+  - Location: `core/audit_helpers.go:119-123`, `core/types.go:42-43`
+  - Mitigation: Documentation explicitly warns against adding sensitive data to metadata
+  - AuditEvent struct designed to exclude passwords, keys, tokens
+  - Code comments: Lines 119-123 in audit_helpers.go, lines 42-43 in types.go
+  - Helpers encourage structured, safe event construction
+
+- **@risk Repudiation** (Insufficient audit event detail)
+  - Location: Throughout implementation
+  - Mitigation: Comprehensive event builder with all relevant context fields
+  - HTTP context helpers capture IP, user agent, method, path
+  - Event IDs automatically generated (UUID v4)
+  - Timestamps automatically set (UTC)
+  - Multiple logger support ensures redundancy
+
+- **@risk Denial of Service** (Unbounded logging fills disk)
+  - Location: `core/memory/file_logger.go:19-20`
+  - Documented: Applications must use external log rotation
+  - Documentation provides logrotate configuration example
+  - Async logger prevents authentication blocking
+  - Code comment: Lines 19-23 in file_logger.go
+
+- **@risk Denial of Service** (Audit logging blocks authentication)
+  - Location: `core/memory/multi_logger.go:221-239`
+  - Mitigation: AsyncLogger for non-blocking audit logging
+  - Configurable buffer size for throughput tuning
+  - Background goroutine processes events asynchronously
+  - Proper shutdown with Close() ensures no data loss
+
+**Architecture Decisions**:
+
+1. **No Automatic Rotation in FileLogger**: Keep it simple
+   - Rationale: External tools (logrotate, journald) handle rotation better
+   - Reduces complexity and dependencies
+   - Standard practice in production environments
+   - Documented with logrotate configuration example
+
+2. **UUID Dependency**: Added github.com/google/uuid
+   - Rationale: Widely used, well-tested, standard UUID implementation
+   - Minimal dependency footprint
+   - Provides unique event IDs without collisions
+   - Better than time-based or random IDs for distributed systems
+
+3. **Fluent Builder Pattern**: AuditEventBuilder uses method chaining
+   - Rationale: Improves readability and reduces boilerplate
+   - Optional fields clearly distinguished from required fields
+   - Consistent with modern Go API design
+   - Auto-generates common fields (ID, timestamp, metadata map)
+
+4. **Filter Combinators**: Functional approach to filtering
+   - Rationale: Composable, testable, flexible
+   - No complex inheritance hierarchies
+   - Filters are pure functions (FilterFunc type)
+   - Easy to create custom filters
+
+5. **Multi-Logger Error Handling**: Continue on partial failures
+   - Rationale: Best effort delivery to all destinations
+   - Collects all errors for inspection
+   - Critical logs aren't lost if one destination fails
+   - Implements MultiLoggerError with Unwrap() for error inspection
+
+6. **HTTP Context Helpers**: Support proxy headers
+   - Rationale: Production environments often use load balancers/proxies
+   - X-Forwarded-For takes precedence over X-Real-IP
+   - Falls back to RemoteAddr if no headers present
+   - Captures useful request metadata (method, path, referer)
+
+**Testing Coverage**:
+
+- Unit tests for all public interfaces and types
+- Concurrent access tests for all logger implementations
+- Error handling tests (file creation failures, encoding errors, etc.)
+- Filter logic tests with edge cases
+- Async logger shutdown and flush tests
+- HTTP context extraction with various header combinations
+- Builder pattern tests with method chaining
+- Integration test demonstrating complete authentication flow with audit logging
+- All tests passing with good coverage of critical paths
+
+**Next Steps** (Future Enhancements):
+
+- Feature 6: CI/CD and development tooling
+- Consider: Structured logging library integration examples (optional)
+- Consider: Sampling support for high-volume events
+- Consider: Event schema versioning for evolution
+- Consider: Batch logging optimization for high throughput
+
+**Files Created**:
+
+Core Implementation:
+- `core/audit_helpers.go` - Event construction helpers and builders
+- `core/audit_helpers_test.go` - Tests for helpers and builders
+- `core/memory/file_logger.go` - File-based logger implementation
+- `core/memory/file_logger_test.go` - File logger tests
+- `core/memory/multi_logger.go` - Multi/filtered/async logger implementations
+- `core/memory/multi_logger_test.go` - Multi/filtered/async logger tests
+
+Example:
+- `examples/audit-logging/main.go` - Comprehensive example demonstrating all features
+- `examples/audit-logging/README.md` - Documentation with production recommendations
+
+**Files Modified**:
+- `go.mod` - Added github.com/google/uuid v1.6.0 dependency
+- `go.sum` - Updated with uuid dependency checksums
+
+**Dependencies Added**:
+- `github.com/google/uuid` v1.6.0 (UUID generation for event IDs)
+
+**Documentation**:
+
+- All public types, interfaces, and functions have comprehensive godoc comments
+- Security considerations documented with @risk/@mitigation tags
+- HTTP context helpers include usage examples in comments
+- Example README provides production deployment guidance
+- logrotate configuration example included
+- Event types and outcomes documented
+- Filter combinators explained with examples
+
+**Production Readiness Notes**:
+
+- ✅ Core implementation production-ready
+- ✅ Thread-safe concurrent access
+- ✅ Comprehensive error handling
+- ✅ Multiple logger implementations
+- ✅ Flexible filtering and routing
+- ✅ Non-blocking async logging option
+- ✅ HTTP context integration
+- ✅ No sensitive data in events (by design)
+- ⚠️  Applications must implement: disk monitoring, log rotation, log retention policies
+- ⚠️  Example is for demonstration only
+- ⚠️  Consider centralized logging (syslog, journald, cloud logging) for production
+- ⚠️  Protect log files with appropriate permissions
+- ⚠️  Consider log shipping for compliance/investigation requirements
+
+---
+
 ## Changelog Format Guide (for AI context)
 
 Each entry should include:
