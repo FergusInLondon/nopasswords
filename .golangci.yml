@@ -1,0 +1,134 @@
+# golangci-lint configuration for NoPasswords
+# See https://golangci-lint.run/usage/configuration/
+
+run:
+  # Timeout for analysis
+  timeout: 5m
+
+  # Which dirs to skip: issues from them won't be reported
+  skip-dirs:
+    - vendor
+
+  # Go version to target
+  go: '1.23'
+
+linters:
+  # Enable specific linters
+  enable:
+    - errcheck      # Check for unchecked errors
+    - gosimple      # Simplify code
+    - govet         # Reports suspicious constructs
+    - ineffassign   # Detects ineffectual assignments
+    - staticcheck   # Go static analysis
+    - typecheck     # Type-check Go code
+    - unused        # Check for unused constants, variables, functions and types
+    - gosec         # Security-focused linter
+    - gofmt         # Checks if code is gofmt-ed
+    - goimports     # Check imports
+    - misspell      # Finds commonly misspelled English words
+    - revive        # Fast, configurable, extensible, flexible linter
+    - unconvert     # Remove unnecessary type conversions
+    - unparam       # Reports unused function parameters
+    - goconst       # Finds repeated strings that could be constants
+    - gocyclo       # Computes cyclomatic complexity
+    - dupl          # Code clone detection
+    - gocritic      # Comprehensive Go linter
+
+linters-settings:
+  errcheck:
+    # Report about not checking errors in type assertions: `a := b.(MyStruct)`
+    check-type-assertions: true
+
+    # Report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`
+    check-blank: false
+
+  govet:
+    # Enable all analyzers
+    enable-all: true
+
+  gocyclo:
+    # Minimal code complexity to report
+    min-complexity: 15
+
+  dupl:
+    # Tokens count to trigger issue
+    threshold: 100
+
+  goconst:
+    # Minimal length of string constant
+    min-len: 3
+    # Minimum occurrences of constant string count to trigger
+    min-occurrences: 3
+
+  misspell:
+    # Correct spellings using locale preferences
+    locale: US
+
+  goimports:
+    # Put imports beginning with prefix after 3rd-party packages
+    local-prefixes: go.fergus.london/nopasswords
+
+  gosec:
+    # To select a subset of rules to run
+    includes:
+      - G401  # Detect use of weak cryptographic primitive
+      - G402  # Look for bad TLS connection settings
+      - G403  # Ensure minimum RSA key length of 2048 bits
+      - G404  # Detect use of weak random number generator
+      - G501  # Import blocklist: crypto/md5
+      - G502  # Import blocklist: crypto/des
+      - G503  # Import blocklist: crypto/rc4
+      - G504  # Import blocklist: net/http/cgi
+      - G505  # Import blocklist: crypto/sha1
+
+    # Exclude generated files
+    exclude-generated: true
+
+  revive:
+    # Enable all rules by default
+    enable-all-rules: false
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+      - name: var-naming
+        severity: warning
+        disabled: false
+      - name: package-comments
+        severity: warning
+        disabled: false
+      - name: error-return
+        severity: warning
+        disabled: false
+      - name: error-naming
+        severity: warning
+        disabled: false
+      - name: if-return
+        severity: warning
+        disabled: false
+
+issues:
+  # Maximum issues count per one linter
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text
+  max-same-issues: 0
+
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - dupl
+        - gosec
+
+output:
+  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate
+  format: colored-line-number
+
+  # Print lines of code with issue
+  print-issued-lines: true
+
+  # Print linter name in the end of issue text
+  print-linter-name: true
