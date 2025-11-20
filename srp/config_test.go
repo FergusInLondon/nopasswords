@@ -66,8 +66,8 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "Missing credential store",
-			opts: []Option{},
+			name:    "Missing credential store",
+			opts:    []Option{},
 			wantErr: true,
 		},
 		{

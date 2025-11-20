@@ -19,7 +19,7 @@ import (
 // - Combining multiple loggers
 
 func main() {
-	fmt.Println("=== NoPasswords Audit Logging Examples ===\n")
+	fmt.Println("=== NoPasswords Audit Logging Examples ===")
 
 	// Example 1: Simple stdout logging
 	example1SimpleStdoutLogging()
@@ -172,7 +172,8 @@ func example4FilteredLogging() {
 	}
 	_ = filteredLogger.Log(ctx, event2)
 
-	fmt.Println("(Note: Only the failure event was logged above)\n")
+	fmt.Println("(Note: Only the failure event was logged above)")
+	fmt.Println()
 }
 
 func example5AsyncLogging() {
@@ -199,7 +200,8 @@ func example5AsyncLogging() {
 	}
 
 	fmt.Println("✓ Logged 5 events asynchronously")
-	fmt.Println("(Events may appear in stdout after this message)\n")
+	fmt.Println("(Events may appear in stdout after this message)")
+	fmt.Println()
 
 	// Give async logger time to process
 	time.Sleep(200 * time.Millisecond)
@@ -223,7 +225,8 @@ func example6ComplexFiltering() {
 	filteredLogger := memory.NewFilteredLogger(baseLogger, filter)
 	ctx := context.Background()
 
-	fmt.Println("Filter: (webauthn AND failure) OR srp\n")
+	fmt.Println("Filter: (webauthn AND failure) OR srp")
+	fmt.Println()
 
 	// Should be logged: WebAuthn failure
 	event1 := core.AuditEvent{
@@ -256,7 +259,8 @@ func example6ComplexFiltering() {
 		Outcome:   core.OutcomeSuccess,
 	}
 	_ = filteredLogger.Log(ctx, event3)
-	fmt.Println("✗ Skipped: WebAuthn success (doesn't match filter)\n")
+	fmt.Println("✗ Skipped: WebAuthn success (doesn't match filter)")
+	fmt.Println()
 }
 
 func example7EventBuilder() {

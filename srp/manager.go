@@ -26,11 +26,12 @@ type Manager struct {
 // NewManager creates a new SRP Manager with the given configuration options.
 //
 // Example:
-//   store := memory.NewMemoryCredentialStore()
-//   manager, err := NewManager(
-//       WithGroup(3),
-//       WithCredentialStore(store),
-//   )
+//
+//	store := memory.NewMemoryCredentialStore()
+//	manager, err := NewManager(
+//	    WithGroup(3),
+//	    WithCredentialStore(store),
+//	)
 func NewManager(opts ...Option) (*Manager, error) {
 	config, err := NewConfig(opts...)
 	if err != nil {
@@ -51,8 +52,9 @@ func NewManager(opts ...Option) (*Manager, error) {
 // Register registers a new user with their SRP verifier.
 //
 // The verifier should be computed client-side as:
-//   x = H(salt | H(username | ":" | password))
-//   v = g^x mod N
+//
+//	x = H(salt | H(username | ":" | password))
+//	v = g^x mod N
 //
 // This method stores the verifier and salt for future authentication.
 //
@@ -182,7 +184,7 @@ func (m *Manager) BeginAuthentication(ctx context.Context, req *AuthenticationBe
 	// Validate group matches
 	if verifier.Group != m.config.Group {
 		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserID, credentialID, core.OutcomeFailure, "group_mismatch", map[string]interface{}{
-			"stored_group":  verifier.Group,
+			"stored_group":   verifier.Group,
 			"expected_group": m.config.Group,
 		})
 		return nil, fmt.Errorf("group mismatch: expected %d, got %d", m.config.Group, verifier.Group)

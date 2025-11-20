@@ -6,7 +6,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc && node build.js",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "lint": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' --fix",
+    "format": "prettier --write 'src/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts'"
   },
   "keywords": [
     "srp",
@@ -19,7 +23,11 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2",
     "esbuild": "^0.24.2",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
     "typescript": "^5.7.2"
   }
 }

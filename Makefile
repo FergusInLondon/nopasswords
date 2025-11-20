@@ -1,4 +1,6 @@
-.PHONY: help test test-verbose test-coverage lint fmt vet tidy clean deps check build
+.PHONY: help test test-verbose test-coverage test-race lint fmt vet tidy clean deps check build \
+        client-install client-build client-lint client-clean \
+        examples dev all ci
 
 # Default target
 .DEFAULT_GOAL := help
@@ -18,6 +20,12 @@ COVERAGE_DIR=coverage
 COVERAGE_PROFILE=$(COVERAGE_DIR)/coverage.out
 COVERAGE_HTML=$(COVERAGE_DIR)/coverage.html
 
+# Client directories
+CLIENT_DIRS=client client-srp
+
+# Example directories
+EXAMPLE_DIRS=examples/webauthn-demo examples/srp-demo examples/audit-logging
+
 ## help: Display this help message
 help:
 	@echo 'Usage:'
@@ -30,6 +38,11 @@ help:
 test:
 	@echo "Running tests..."
 	$(GOTEST) -v ./...
+
+## test-race: Run tests with race detector
+test-race:
+	@echo "Running tests with race detector..."
+	$(GOTEST) -v -race ./...
 
 ## test-short: Run tests without long-running tests
 test-short:
@@ -86,3 +99,62 @@ clean:
 	$(GOCLEAN)
 	rm -rf $(COVERAGE_DIR)
 	@echo "Clean complete!"
+
+## client-install: Install client dependencies
+client-install:
+	@echo "Installing client dependencies..."
+	@for dir in $(CLIENT_DIRS); do \
+		echo "Installing dependencies in $$dir..."; \
+		cd $$dir && npm install && cd ..; \
+	done
+
+## client-build: Build all client libraries
+client-build:
+	@echo "Building client libraries..."
+	@for dir in $(CLIENT_DIRS); do \
+		echo "Building $$dir..."; \
+		cd $$dir && npm run build && cd ..; \
+	done
+
+## client-lint: Lint all client code
+client-lint:
+	@echo "Linting client code..."
+	@for dir in $(CLIENT_DIRS); do \
+		if [ -f "$$dir/package.json" ] && grep -q "\"lint\"" "$$dir/package.json"; then \
+			echo "Linting $$dir..."; \
+			cd $$dir && npm run lint && cd ..; \
+		else \
+			echo "No lint script in $$dir, skipping..."; \
+		fi; \
+	done
+
+## client-clean: Clean client build artifacts
+client-clean:
+	@echo "Cleaning client artifacts..."
+	@for dir in $(CLIENT_DIRS); do \
+		echo "Cleaning $$dir..."; \
+		rm -rf $$dir/dist $$dir/node_modules $$dir/package-lock.json; \
+	done
+
+## examples: Build all examples
+examples:
+	@echo "Building examples..."
+	@for dir in $(EXAMPLE_DIRS); do \
+		echo "Building $$dir..."; \
+		cd $$dir && $(GOBUILD) -o $$(basename $$dir) . && cd ../..; \
+	done
+
+## dev: Start development environment (install deps, build clients)
+dev: deps client-install client-build
+	@echo "Development environment ready!"
+	@echo "Run 'make examples' to build example applications"
+	@echo "Run 'make test' to run tests"
+	@echo "Run 'make lint' to check code quality"
+
+## all: Run complete build pipeline (format, lint, test, build)
+all: fmt vet lint test build client-build examples
+	@echo "Complete build pipeline successful!"
+
+## ci: Run CI checks (optimized for GitHub Actions)
+ci: deps lint test-race test-coverage build client-build examples
+	@echo "CI checks complete!"

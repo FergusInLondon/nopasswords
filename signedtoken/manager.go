@@ -23,14 +23,15 @@ type Manager struct {
 // The Signer option is required; all other options have sensible defaults.
 //
 // Example:
-//   key := make([]byte, 32)
-//   rand.Read(key)
-//   signer, _ := NewHMACSignerSHA256(key)
-//   manager, err := NewManager(
-//       WithSigner(signer),
-//       WithDefaultLifetime(30 * time.Minute),
-//       WithAuditLogger(logger),
-//   )
+//
+//	key := make([]byte, 32)
+//	rand.Read(key)
+//	signer, _ := NewHMACSignerSHA256(key)
+//	manager, err := NewManager(
+//	    WithSigner(signer),
+//	    WithDefaultLifetime(30 * time.Minute),
+//	    WithAuditLogger(logger),
+//	)
 //
 // Returns an error if the configuration is invalid (e.g., no signer provided).
 func NewManager(opts ...Option) (*Manager, error) {

@@ -568,8 +568,8 @@ func (m *Manager) FinishAuthentication(ctx context.Context, sessionData *Session
 			UserID:    userID,
 			Outcome:   "failure",
 			Metadata: map[string]interface{}{
-				"error":         "sign counter anomaly detected",
-				"stored_count":  cred.SignCount,
+				"error":          "sign counter anomaly detected",
+				"stored_count":   cred.SignCount,
 				"received_count": credential.Authenticator.SignCount,
 			},
 		})

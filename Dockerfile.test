@@ -1,0 +1,53 @@
+# Testing Dockerfile for NoPasswords E2E tests
+# Includes Playwright and browsers for WebAuthn testing
+
+FROM mcr.microsoft.com/playwright:v1.49.1-jammy
+
+# @risk Tampering: Using official Microsoft Playwright image to prevent supply chain attacks
+# @mitigation: Pin specific image version, use official trusted registry
+
+# Install Go
+RUN apt-get update && apt-get install -y wget \
+    && wget https://go.dev/dl/go1.23.4.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.23.4.linux-amd64.tar.gz \
+    && rm go1.23.4.linux-amd64.tar.gz \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GOPATH="/go"
+ENV PATH="${GOPATH}/bin:${PATH}"
+
+# Install Node.js (already in base image, but ensure we have npm)
+RUN apt-get update && apt-get install -y \
+    make \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install golangci-lint
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+    sh -s -- -b /usr/local/bin v1.61.0
+
+# Set working directory
+WORKDIR /workspace
+
+# Install Playwright browsers (already in base image, but ensure they're available)
+# The base image includes Chromium, Firefox, and WebKit
+
+# Copy dependency files
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY client/package.json client/package-lock.json* ./client/
+COPY client-srp/package.json client-srp/package-lock.json* ./client-srp/
+
+# Install dependencies
+RUN cd client && npm install && cd .. \
+    && cd client-srp && npm install && cd ..
+
+# Copy source code
+COPY . .
+
+# Default command runs all tests
+CMD ["make", "ci"]

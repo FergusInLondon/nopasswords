@@ -69,11 +69,11 @@ func TestUserWebAuthnInterface(t *testing.T) {
 
 func TestSessionDataMarshalUnmarshal(t *testing.T) {
 	session := SessionData{
-		Challenge:        []byte("test-challenge"),
-		UserID:           "user-123",
-		ExpiresAt:        time.Now().Add(time.Minute).Truncate(time.Second),
+		Challenge:          []byte("test-challenge"),
+		UserID:             "user-123",
+		ExpiresAt:          time.Now().Add(time.Minute).Truncate(time.Second),
 		AllowedCredentials: [][]byte{[]byte("cred-1"), []byte("cred-2")},
-		UserVerification: VerificationPreferred,
+		UserVerification:   VerificationPreferred,
 	}
 
 	data, err := session.MarshalBinary()
