@@ -8,7 +8,7 @@ This changelog is optimized for AI-assisted development context. Each entry prov
 
 ### 2025-11-20 - Feature 1: Core Library Structure
 
-**Status**: In Progress
+**Status**: Completed
 
 **Objective**: Establish foundational architecture for the NoPasswords library with core interfaces and reference implementations.
 
@@ -140,6 +140,150 @@ This changelog is optimized for AI-assisted development context. Each entry prov
 - `github.com/stretchr/testify` v1.9.0 (testing)
 
 **Godoc Comments**: All public types, interfaces, and functions documented with security considerations noted where applicable.
+
+---
+
+### 2025-11-20 - Feature 2: Signed Token Authentication
+
+**Status**: Completed
+
+**Objective**: Implement time-limited, cryptographically signed tokens for magic link style authentication with URL-safe encoding and optional revocation support.
+
+**Changes Implemented**:
+
+1. **Token Structure** (`signedtoken/token.go`)
+   - `Token`: Core token structure with user ID, timestamps, and optional metadata
+   - `SignedToken`: Token with cryptographic signature
+   - Enforces maximum token lifetime of 24 hours
+   - Enforces maximum metadata size of 1KB
+   - URL-safe base64 encoding (no padding, using `-` and `_`)
+   - Token ID generation via SHA-256 hash for revocation support
+
+2. **Signing Infrastructure** (`signedtoken/signer.go`)
+   - `Signer`: Interface for pluggable signing implementations
+   - `HMACSignerSHA256`: Default HMAC-SHA256 implementation
+   - Enforces minimum key length of 256 bits (32 bytes)
+   - Constant-time signature comparison to prevent timing attacks
+   - Key is copied on initialization to prevent external modification
+
+3. **Manager** (`signedtoken/manager.go`)
+   - `Manager`: Main API for token generation and verification
+   - `GenerateToken()`: Creates signed tokens with default lifetime
+   - `GenerateTokenWithLifetime()`: Creates tokens with custom lifetime
+   - `VerifyToken()`: Validates signature, expiration, and revocation status
+   - `RevokeToken()`: Marks tokens as revoked (requires TokenStore)
+   - Integrates with core audit logging for all operations
+   - Stateless verification (signature-based) with optional stateful revocation
+
+4. **Configuration** (`signedtoken/config.go`)
+   - Functional options pattern for flexible configuration
+   - `WithSigner()`: Required - sets cryptographic signer
+   - `WithDefaultLifetime()`: Optional - default 1 hour
+   - `WithTokenStore()`: Optional - enables revocation support
+   - `WithAuditLogger()`: Optional - defaults to no-op logger
+   - `WithOpaqueIDs()`: Optional - enables opaque identifier mode
+   - Configuration validation ensures signer is present and lifetime is valid
+
+5. **Testing** (`signedtoken/*_test.go`)
+   - Comprehensive unit tests for all components
+   - Token serialization/deserialization tests
+   - Signer implementation tests with various key lengths
+   - Manager tests covering generation, verification, and revocation
+   - Integration tests for full generate → verify → revoke cycle
+   - Negative tests for expired tokens, invalid signatures, tampered data
+   - Concurrent operation tests verifying thread safety
+   - Benchmarks for performance measurement
+
+**Security Risks Addressed**:
+
+- **@risk Spoofing** (Weak signing keys allow token forgery)
+  - Location: `signedtoken/signer.go:28-30`
+  - Mitigation: Enforced minimum key length of 256 bits
+  - Code comment: Lines 23-25
+
+- **@risk Tampering** (Insufficient signature validation allows modification)
+  - Location: `signedtoken/signer.go:103-105, signedtoken/manager.go:138-143`
+  - Mitigation: Cryptographic signature verification with constant-time comparison
+  - Code comment: Lines 96, 104, 141
+
+- **@risk Repudiation** (Lack of audit logging prevents investigation)
+  - Location: `signedtoken/manager.go:112-117, 172-177, 221-223, 257-260`
+  - Mitigation: Comprehensive audit events for all token operations
+  - Code comment: Lines 66-67, 164, 219, 255
+
+- **@risk Information Disclosure** (Tokens might leak user identifiers in URLs)
+  - Location: `signedtoken/token.go:46-49, signedtoken/config.go:47-58`
+  - Mitigation: Optional opaque identifier mode available via configuration
+  - Code comment: Lines 46-49 in token.go, 47-57 in config.go
+  - Documented as implementer responsibility with mitigation option
+
+- **@risk Denial of Service** (No rate limiting on token generation, unbounded storage)
+  - Location: INITIAL_IMPLEMENTATION.md line 112
+  - Documented: Explicitly noted as implementer responsibility
+  - Mitigation: Maximum token lifetime (24 hours) and metadata size (1KB) limits enforced
+  - Code comment: Lines 10-13, 17-20 in token.go
+
+**Architecture Decisions**:
+
+1. **HMAC-SHA256 as Default**: Chosen for balance of security, performance, and simplicity
+   - Symmetric key operation (same key for sign/verify)
+   - Well-understood cryptographic properties
+   - Fast computation suitable for high-throughput scenarios
+   - Extensible via Signer interface for asymmetric alternatives
+
+2. **URL-Safe Base64 Encoding**: Required for magic link delivery
+   - No padding (`=`) to prevent URL encoding issues
+   - Uses `-` and `_` instead of `+` and `/`
+   - Warns if token exceeds 2048 bytes (common URL length limit)
+
+3. **Optional Revocation Support**: Tokens are stateless by default
+   - Signature-only verification for maximum scalability
+   - Optional TokenStore enables revocation at cost of state
+   - Token ID derived from hash (not embedded) to prevent information disclosure
+
+4. **Opaque Identifier Mode**: Privacy-conscious option for user IDs
+   - Disabled by default (IDs included in tokens as-is)
+   - When enabled, expects application to provide opaque IDs
+   - Reduces information leakage in URLs and logs
+
+5. **Functional Options Pattern**: Consistent with core library design
+   - Required options (Signer) enforced via validation
+   - Optional features have sensible defaults
+   - Backward compatible - new options don't break existing code
+
+**Testing Coverage**:
+- Unit tests for token creation, encoding, validation
+- Unit tests for HMAC signer with various key lengths and edge cases
+- Manager tests for generation, verification, revocation workflows
+- Integration tests for complete authentication flows
+- Negative tests for security boundaries (expired, tampered, invalid)
+- Concurrent access tests for thread safety
+- Benchmarks for performance analysis
+
+**Next Steps** (Future Features):
+- Feature 3: Implement WebAuthn support
+- Feature 4: Implement SRP protocol
+- Feature 5: Expand audit logging capabilities
+- Feature 6: CI/CD and development tooling
+- Consider: Example code for email integration
+- Consider: KMS-based signer implementation example
+
+**Files Created**:
+- `signedtoken/token.go` - Token structures and serialization
+- `signedtoken/signer.go` - Signer interface and HMAC implementation
+- `signedtoken/manager.go` - Token generation and verification
+- `signedtoken/config.go` - Configuration and options
+- `signedtoken/token_test.go` - Token tests
+- `signedtoken/signer_test.go` - Signer tests
+- `signedtoken/manager_test.go` - Manager and integration tests
+
+**Dependencies**: No new dependencies (uses existing testify)
+
+**Godoc Comments**: All public types, interfaces, and functions documented with:
+- Security considerations and risk annotations (@risk, @mitigation)
+- Usage examples where appropriate
+- Parameter constraints (e.g., key lengths, lifetime limits)
+- Thread safety guarantees
 
 ---
 
