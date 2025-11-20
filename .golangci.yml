@@ -9,7 +9,6 @@ run:
 
 linters:
   # Enable specific linters
-  disable-all: true
   enable:
     - govet         # Reports suspicious constructs
     - gosec         # Security-focused linter
@@ -48,9 +47,6 @@ linters:
         - G503  # Import blocklist: crypto/rc4
         - G504  # Import blocklist: net/http/cgi
         - G505  # Import blocklist: crypto/sha1
-
-      # Exclude generated files
-      exclude-generated: true
 
     revive:
       # Enable all rules by default
@@ -94,13 +90,3 @@ issues:
   max-issues-per-linter: 0
   # Maximum count of issues with the same text
   max-same-issues: 0
-
-output:
-  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate
-  format: colored-line-number
-
-  # Print lines of code with issue
-  print-issued-lines: true
-
-  # Print linter name in the end of issue text
-  print-linter-name: true
