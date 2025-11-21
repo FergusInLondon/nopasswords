@@ -20,7 +20,6 @@ import (
 type Manager struct {
 	config   *Config
 	group    *Group
-	sessions sync.Map // map[string]*ServerSession - temporary session storage
 }
 
 // NewManager creates a new SRP Manager with the given configuration options.
@@ -67,8 +66,8 @@ func (m *Manager) Register(ctx context.Context, req *RegistrationRequest) (*Regi
 	startTime := time.Now()
 
 	// Validate request
-	if req.UserID == "" {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserID, "", core.OutcomeFailure, "empty_user_id", nil)
+	if req.UserIdentifier == "" {
+		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeFailure, "empty_user_id", nil)
 		return &RegistrationResponse{
 			Success: false,
 			Error:   "user ID cannot be empty",
@@ -76,7 +75,7 @@ func (m *Manager) Register(ctx context.Context, req *RegistrationRequest) (*Regi
 	}
 
 	if len(req.Salt) < MinSaltLength {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserID, "", core.OutcomeFailure, "invalid_salt_length", nil)
+		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeFailure, "invalid_salt_length", nil)
 		return &RegistrationResponse{
 			Success: false,
 			Error:   fmt.Sprintf("salt must be at least %d bytes", MinSaltLength),
@@ -84,7 +83,7 @@ func (m *Manager) Register(ctx context.Context, req *RegistrationRequest) (*Regi
 	}
 
 	if len(req.Verifier) == 0 {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserID, "", core.OutcomeFailure, "empty_verifier", nil)
+		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeFailure, "empty_verifier", nil)
 		return &RegistrationResponse{
 			Success: false,
 			Error:   "verifier cannot be empty",
@@ -93,7 +92,7 @@ func (m *Manager) Register(ctx context.Context, req *RegistrationRequest) (*Regi
 
 	// Validate group
 	if req.Group != m.config.Group {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserID, "", core.OutcomeFailure, "group_mismatch", map[string]interface{}{
+		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeFailure, "group_mismatch", map[string]interface{}{
 			"requested_group": req.Group,
 			"expected_group":  m.config.Group,
 		})
@@ -104,41 +103,39 @@ func (m *Manager) Register(ctx context.Context, req *RegistrationRequest) (*Regi
 	}
 
 	// Create verifier record
-	verifier := &Verifier{
-		UserID:    req.UserID,
+	verifier := &Verifier{ // TODO: Thse structs are now identical. Embed Verifier within req?
+		UserIdentifier:    req.UserIdentifier,
 		Salt:      req.Salt,
 		Verifier:  req.Verifier,
 		Group:     req.Group,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
 	}
 
 	// Serialize verifier
 	data, err := verifier.MarshalBinary()
 	if err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserID, "", core.OutcomeError, "marshal_error", nil)
+		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeError, "marshal_error", nil)
 		return nil, fmt.Errorf("failed to marshal verifier: %w", err)
 	}
 
 	// Generate credential ID (hash of userID for SRP)
-	credentialID := m.generateCredentialID(req.UserID)
+	credentialID := m.generateCredentialID(req.UserIdentifier)
 
 	// Store verifier
-	err = m.config.CredentialStore.StoreCredential(ctx, req.UserID, credentialID, data)
+	err = m.config.CredentialStore.StoreCredential(ctx, req.UserIdentifier, credentialID, data)
 	if err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserID, credentialID, core.OutcomeError, "storage_error", nil)
+		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, credentialID, core.OutcomeError, "storage_error", nil)
 		return nil, fmt.Errorf("failed to store verifier: %w", err)
 	}
 
 	// Log successful registration
-	m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserID, credentialID, core.OutcomeSuccess, "", map[string]interface{}{
+	m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, credentialID, core.OutcomeSuccess, "", map[string]interface{}{
 		"group":    req.Group,
 		"duration": time.Since(startTime).Milliseconds(),
 	})
 
 	return &RegistrationResponse{
 		Success: true,
-		UserID:  req.UserID,
+		UserIdentifier:  req.UserIdentifier,
 	}, nil
 }
 
@@ -158,18 +155,18 @@ func (m *Manager) BeginAuthentication(ctx context.Context, req *AuthenticationBe
 	startTime := time.Now()
 
 	// Validate request
-	if req.UserID == "" {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserID, "", core.OutcomeFailure, "empty_user_id", nil)
-		return nil, fmt.Errorf("user ID cannot be empty")
+	if req.UserIdentifier == "" {
+		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, "", core.OutcomeFailure, "empty_user_id", nil)
+		return nil, fmt.Errorf("user identifier cannot be empty")
 	}
 
 	// Generate credential ID
-	credentialID := m.generateCredentialID(req.UserID)
+	credentialID := m.generateCredentialID(req.UserIdentifier) // TODO: Generating the ID...? The CredentialStore should have a lookup by identifier
 
 	// Retrieve verifier from storage
-	data, err := m.config.CredentialStore.GetCredential(ctx, req.UserID, credentialID)
+	data, err := m.config.CredentialStore.GetCredential(ctx, req.UserIdentifier, credentialID)
 	if err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserID, credentialID, core.OutcomeFailure, "user_not_found", nil)
+		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeFailure, "user_not_found", nil)
 		// Return generic error to prevent user enumeration
 		return nil, core.ErrInvalidCredential
 	}
@@ -177,13 +174,13 @@ func (m *Manager) BeginAuthentication(ctx context.Context, req *AuthenticationBe
 	// Deserialize verifier
 	var verifier Verifier
 	if err := verifier.UnmarshalBinary(data); err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserID, credentialID, core.OutcomeError, "unmarshal_error", nil)
+		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeError, "unmarshal_error", nil)
 		return nil, fmt.Errorf("failed to unmarshal verifier: %w", err)
 	}
 
 	// Validate group matches
 	if verifier.Group != m.config.Group {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserID, credentialID, core.OutcomeFailure, "group_mismatch", map[string]interface{}{
+		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeFailure, "group_mismatch", map[string]interface{}{
 			"stored_group":   verifier.Group,
 			"expected_group": m.config.Group,
 		})
@@ -196,7 +193,7 @@ func (m *Manager) BeginAuthentication(ctx context.Context, req *AuthenticationBe
 	// session key prediction.
 	b, err := generateRandomBigInt(256)
 	if err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserID, credentialID, core.OutcomeError, "random_generation_failed", nil)
+		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeError, "random_generation_failed", nil)
 		return nil, fmt.Errorf("failed to generate ephemeral value: %w", err)
 	}
 
@@ -218,24 +215,19 @@ func (m *Manager) BeginAuthentication(ctx context.Context, req *AuthenticationBe
 
 	// Create server session
 	session := &ServerSession{
-		UserID:    req.UserID,
+		UserIdentifier:    req.UserIdentifier,
 		Group:     m.config.Group,
 		b:         b,
 		B:         B,
 		v:         v,
-		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(m.config.SessionTimeout),
 	}
 
 	// Store session (indexed by userID)
 	// @mitigation Denial of Service: Sessions expire after configured timeout
-	m.sessions.Store(req.UserID, session)
-
-	// Clean up expired sessions periodically
-	go m.cleanupExpiredSessions()
+	m.sessions.Store(req.UserIdentifier, session)
 
 	// Log authentication begin
-	m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserID, credentialID, core.OutcomeSuccess, "begin", map[string]interface{}{
+	m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeSuccess, "begin", map[string]interface{}{
 		"group":    m.config.Group,
 		"duration": time.Since(startTime).Milliseconds(),
 	})
@@ -268,8 +260,8 @@ func (m *Manager) FinishAuthentication(ctx context.Context, req *AuthenticationF
 	startTime := time.Now()
 
 	// Validate request
-	if req.UserID == "" {
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserID, "", core.OutcomeFailure, "empty_user_id", nil)
+	if req.UserIdentifier == "" {
+		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, "", core.OutcomeFailure, "empty_user_id", nil)
 		return &AuthenticationFinishResponse{
 			Success: false,
 			Error:   "user ID cannot be empty",
@@ -277,7 +269,7 @@ func (m *Manager) FinishAuthentication(ctx context.Context, req *AuthenticationF
 	}
 
 	if len(req.A) == 0 || len(req.M1) == 0 {
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserID, "", core.OutcomeFailure, "missing_parameters", nil)
+		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, "", core.OutcomeFailure, "missing_parameters", nil)
 		return &AuthenticationFinishResponse{
 			Success: false,
 			Error:   "A and M1 are required",
@@ -285,9 +277,9 @@ func (m *Manager) FinishAuthentication(ctx context.Context, req *AuthenticationF
 	}
 
 	// Retrieve session
-	sessionInterface, ok := m.sessions.Load(req.UserID)
+	sessionInterface, ok := m.sessions.Load(req.UserIdentifier)
 	if !ok {
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserID, "", core.OutcomeFailure, "session_not_found", nil)
+		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, "", core.OutcomeFailure, "session_not_found", nil)
 		return &AuthenticationFinishResponse{
 			Success: false,
 			Error:   "session not found or expired",
@@ -296,17 +288,6 @@ func (m *Manager) FinishAuthentication(ctx context.Context, req *AuthenticationF
 
 	session := sessionInterface.(*ServerSession)
 
-	// Check session expiration
-	// @mitigation Denial of Service: Expired sessions are rejected
-	if time.Now().After(session.ExpiresAt) {
-		m.sessions.Delete(req.UserID)
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserID, "", core.OutcomeFailure, "session_expired", nil)
-		return &AuthenticationFinishResponse{
-			Success: false,
-			Error:   "session expired",
-		}, nil, nil
-	}
-
 	// Parse client's public ephemeral value A
 	A := new(big.Int).SetBytes(req.A)
 
@@ -314,8 +295,8 @@ func (m *Manager) FinishAuthentication(ctx context.Context, req *AuthenticationF
 	// @mitigation Tampering: Reject invalid A values that could compromise security
 	Amod := new(big.Int).Mod(A, m.group.N)
 	if Amod.Cmp(big.NewInt(0)) == 0 {
-		m.sessions.Delete(req.UserID)
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserID, "", core.OutcomeFailure, "invalid_client_ephemeral", nil)
+		m.sessions.Delete(req.UserIdentifier)
+		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, "", core.OutcomeFailure, "invalid_client_ephemeral", nil)
 		return &AuthenticationFinishResponse{
 			Success: false,
 			Error:   "invalid client ephemeral value",
@@ -336,14 +317,14 @@ func (m *Manager) FinishAuthentication(ctx context.Context, req *AuthenticationF
 	K := hashSHA256(S.Bytes())
 
 	// Compute expected M1 = H(H(N) XOR H(g) | H(I) | salt | A | B | K)
-	expectedM1 := m.computeM1(req.UserID, session.B.Bytes(), req.A, K)
+	expectedM1 := m.computeM1(req.UserIdentifier, session.B.Bytes(), req.A, K)
 
 	// Verify M1 using constant-time comparison
 	// @mitigation Information Disclosure: Constant-time comparison prevents timing attacks
 	// that could leak information about the password
 	if subtle.ConstantTimeCompare(req.M1, expectedM1) != 1 {
-		m.sessions.Delete(req.UserID)
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserID, m.generateCredentialID(req.UserID), core.OutcomeFailure, "invalid_proof", map[string]interface{}{
+		m.sessions.Delete(req.UserIdentifier)
+		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, m.generateCredentialID(req.UserIdentifier), core.OutcomeFailure, "invalid_proof", map[string]interface{}{
 			"duration": time.Since(startTime).Milliseconds(),
 		})
 		return &AuthenticationFinishResponse{
@@ -356,18 +337,18 @@ func (m *Manager) FinishAuthentication(ctx context.Context, req *AuthenticationF
 	M2 := m.computeM2(req.A, req.M1, K)
 
 	// Delete session (one-time use)
-	m.sessions.Delete(req.UserID)
+	m.sessions.Delete(req.UserIdentifier)
 
 	// Create session key
 	sessionKey := &SessionKey{
 		Key:       K,
-		UserID:    req.UserID,
+		UserIdentifier:    req.UserIdentifier,
 		Timestamp: time.Now(),
 	}
 
 	// Log successful authentication
 	// @mitigation Repudiation: Comprehensive audit logging for security investigations
-	m.logAuditEvent(ctx, eventID, core.EventAuthSuccess, req.UserID, m.generateCredentialID(req.UserID), core.OutcomeSuccess, "", map[string]interface{}{
+	m.logAuditEvent(ctx, eventID, core.EventAuthSuccess, req.UserIdentifier, m.generateCredentialID(req.UserIdentifier), core.OutcomeSuccess, "", map[string]interface{}{
 		"group":    m.config.Group,
 		"duration": time.Since(startTime).Milliseconds(),
 	})
@@ -412,36 +393,22 @@ func (m *Manager) computeM2(A, M1, K []byte) []byte {
 	return hashSHA256(combined)
 }
 
-// cleanupExpiredSessions removes expired sessions from memory.
-// This is called periodically to prevent memory leaks.
-//
-// @mitigation Denial of Service: Prevents unbounded session storage growth.
-func (m *Manager) cleanupExpiredSessions() {
-	now := time.Now()
-	m.sessions.Range(func(key, value interface{}) bool {
-		session := value.(*ServerSession)
-		if now.After(session.ExpiresAt) {
-			m.sessions.Delete(key)
-		}
-		return true
-	})
-}
-
 // generateCredentialID generates a credential ID from the user ID.
 // For SRP, we use a hash of the userID as the credential ID.
+// TODO: Total nonsense, not required.
 func (m *Manager) generateCredentialID(userID string) string {
 	hash := sha256.Sum256([]byte("srp:" + userID))
 	return hex.EncodeToString(hash[:])
 }
 
 // logAuditEvent logs a security audit event.
-func (m *Manager) logAuditEvent(ctx context.Context, eventID, eventType, userID, credentialID, outcome, reason string, metadata map[string]interface{}) {
+func (m *Manager) logAuditEvent(ctx context.Context, eventID, eventType, UserIdentifier, credentialID, outcome, reason string, metadata map[string]interface{}) {
 	event := core.AuditEvent{
 		EventID:      eventID,
 		Timestamp:    time.Now(),
 		EventType:    eventType,
 		Method:       "srp",
-		UserID:       userID,
+		UserIdentifier:       UserIdentifier,
 		CredentialID: credentialID,
 		Outcome:      outcome,
 		Reason:       reason,
@@ -490,6 +457,7 @@ func padBytes(data []byte, length int) []byte {
 }
 
 // generateEventID generates a unique event ID for audit logging.
+// TODO: Why cant this be handled within the core module?
 func generateEventID() string {
 	randomBytes := make([]byte, 16)
 	rand.Read(randomBytes)

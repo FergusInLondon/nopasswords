@@ -23,7 +23,7 @@ func TestNopLogger_Log(t *testing.T) {
 		EventID:   "event123",
 		Timestamp: time.Now(),
 		EventType: core.EventAuthSuccess,
-		UserID:    "user456",
+		UserIdentifier:    "user456",
 		Outcome:   core.OutcomeSuccess,
 	}
 
@@ -46,7 +46,7 @@ func TestStdoutLogger_Log(t *testing.T) {
 		Timestamp: time.Now(),
 		EventType: core.EventAuthSuccess,
 		Method:    "webauthn",
-		UserID:    "user456",
+		UserIdentifier:    "user456",
 		Outcome:   core.OutcomeSuccess,
 		Reason:    "valid_credential",
 	}
@@ -68,7 +68,7 @@ func TestStdoutLogger_Log(t *testing.T) {
 	assert.Equal(t, event.EventID, logged.EventID)
 	assert.Equal(t, event.EventType, logged.EventType)
 	assert.Equal(t, event.Method, logged.Method)
-	assert.Equal(t, event.UserID, logged.UserID)
+	assert.Equal(t, event.UserIdentifier, logged.UserIdentifier)
 	assert.Equal(t, event.Outcome, logged.Outcome)
 	assert.Equal(t, event.Reason, logged.Reason)
 }
@@ -86,7 +86,7 @@ func TestStdoutLogger_Log_Pretty(t *testing.T) {
 		EventID:   "event123",
 		Timestamp: time.Now(),
 		EventType: core.EventAuthSuccess,
-		UserID:    "user456",
+		UserIdentifier:    "user456",
 		Outcome:   core.OutcomeSuccess,
 	}
 
@@ -160,7 +160,7 @@ func TestStderrLogger_Log(t *testing.T) {
 		EventID:   "event123",
 		Timestamp: time.Now(),
 		EventType: core.EventAuthFailure,
-		UserID:    "user456",
+		UserIdentifier:    "user456",
 		Outcome:   core.OutcomeFailure,
 		Reason:    "invalid_credential",
 	}
@@ -181,7 +181,7 @@ func TestStderrLogger_Log(t *testing.T) {
 
 	assert.Equal(t, event.EventID, logged.EventID)
 	assert.Equal(t, event.EventType, logged.EventType)
-	assert.Equal(t, event.UserID, logged.UserID)
+	assert.Equal(t, event.UserIdentifier, logged.UserIdentifier)
 	assert.Equal(t, event.Outcome, logged.Outcome)
 }
 

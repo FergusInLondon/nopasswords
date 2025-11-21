@@ -69,7 +69,7 @@ func TestBeginRegistration(t *testing.T) {
 
 	// Verify session data
 	assert.NotEmpty(t, sessionData.Challenge)
-	assert.Equal(t, "user-123", sessionData.UserID)
+	assert.Equal(t, "user-123", sessionData.UserIdentifier)
 	assert.False(t, sessionData.IsExpired())
 	assert.Equal(t, VerificationPreferred, sessionData.UserVerification)
 }
@@ -156,7 +156,7 @@ func TestBeginAuthentication(t *testing.T) {
 
 	// Verify session data
 	assert.NotEmpty(t, sessionData.Challenge)
-	assert.Equal(t, "user-123", sessionData.UserID)
+	assert.Equal(t, "user-123", sessionData.UserIdentifier)
 	assert.False(t, sessionData.IsExpired())
 }
 
@@ -352,7 +352,7 @@ func TestBeginRegistrationWithExistingCredentials(t *testing.T) {
 	// Note: The credential exclude list behavior depends on the go-webauthn library
 	// We've verified that credentials are loaded; the library handles the exclude list
 	// Just verify the credentials were loaded into the user object
-	assert.NotEmpty(t, sessionData.UserID)
+	assert.NotEmpty(t, sessionData.UserIdentifier)
 }
 
 func TestNilSessionDataHandling(t *testing.T) {
@@ -399,7 +399,7 @@ func TestNilResponseHandling(t *testing.T) {
 	ctx := context.Background()
 	sessionData := &SessionData{
 		Challenge: []byte("test-challenge"),
-		UserID:    "user-123",
+		UserIdentifier:    "user-123",
 		ExpiresAt: time.Now().Add(time.Minute),
 	}
 

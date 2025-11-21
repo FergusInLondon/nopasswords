@@ -19,13 +19,13 @@ import (
 //	    "user123",
 //	    core.OutcomeSuccess,
 //	)
-func NewAuditEvent(eventType, method, userID, outcome string) AuditEvent {
+func NewAuditEvent(eventType, method, userIdentifier, outcome string) AuditEvent {
 	return AuditEvent{
 		EventID:   uuid.New().String(),
 		Timestamp: time.Now().UTC(),
 		EventType: eventType,
 		Method:    method,
-		UserID:    userID,
+		UserIdentifier:    userIdentifier,
 		Outcome:   outcome,
 		Metadata:  make(map[string]interface{}),
 	}
@@ -85,8 +85,8 @@ func (b *AuditEventBuilder) WithMethod(method string) *AuditEventBuilder {
 }
 
 // WithUserID sets the user identifier.
-func (b *AuditEventBuilder) WithUserID(userID string) *AuditEventBuilder {
-	b.event.UserID = userID
+func (b *AuditEventBuilder) WithUserIdentifier(userIdentifier string) *AuditEventBuilder {
+	b.event.UserIdentifier = userIdentifier
 	return b
 }
 

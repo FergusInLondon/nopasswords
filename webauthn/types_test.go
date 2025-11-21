@@ -70,7 +70,7 @@ func TestUserWebAuthnInterface(t *testing.T) {
 func TestSessionDataMarshalUnmarshal(t *testing.T) {
 	session := SessionData{
 		Challenge:          []byte("test-challenge"),
-		UserID:             "user-123",
+		UserIdentifier:             "user-123",
 		ExpiresAt:          time.Now().Add(time.Minute).Truncate(time.Second),
 		AllowedCredentials: [][]byte{[]byte("cred-1"), []byte("cred-2")},
 		UserVerification:   VerificationPreferred,
@@ -85,7 +85,7 @@ func TestSessionDataMarshalUnmarshal(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, session.Challenge, decoded.Challenge)
-	assert.Equal(t, session.UserID, decoded.UserID)
+	assert.Equal(t, session.UserIdentifier, decoded.UserIdentifier)
 	assert.Equal(t, session.ExpiresAt.Unix(), decoded.ExpiresAt.Unix())
 	assert.Equal(t, session.UserVerification, decoded.UserVerification)
 	assert.Len(t, decoded.AllowedCredentials, 2)

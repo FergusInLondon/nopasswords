@@ -151,7 +151,7 @@ type RegistrationResult struct {
 	// Credential is the newly registered credential
 	Credential Credential
 	// UserID is the user identifier
-	UserID string
+	UserIdentifier string
 	// Timestamp is when the registration completed
 	Timestamp time.Time
 }
@@ -159,7 +159,7 @@ type RegistrationResult struct {
 // AuthenticationResult contains the outcome of a successful WebAuthn authentication.
 type AuthenticationResult struct {
 	// UserID is the authenticated user's identifier
-	UserID string
+	UserIdentifier string
 	// CredentialID is the credential used for authentication
 	CredentialID []byte
 	// SignCount is the new signature counter value
@@ -185,7 +185,7 @@ type SessionData struct {
 	// Challenge is the cryptographic challenge for this ceremony
 	Challenge []byte `json:"challenge"`
 	// UserID is the user identifier for this ceremony
-	UserID string `json:"userID"`
+	UserIdentifier string `json:"userID"`
 	// ExpiresAt is when this session data expires
 	ExpiresAt time.Time `json:"expiresAt"`
 	// AllowedCredentials lists the credential IDs allowed for this ceremony (for assertion)

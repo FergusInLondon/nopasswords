@@ -90,7 +90,7 @@ func (m *Manager) BeginRegistration(ctx context.Context, userID, userName, userD
 	_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 		Timestamp: time.Now(),
 		EventType: "webauthn.registration.begin",
-		UserID:    userID,
+		UserIdentifier:    userID,
 		Outcome:   "initiated",
 		Metadata: map[string]interface{}{
 			"userName": userName,
@@ -151,7 +151,7 @@ func (m *Manager) BeginRegistration(ctx context.Context, userID, userName, userD
 		_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 			Timestamp: time.Now(),
 			EventType: "webauthn.registration.begin",
-			UserID:    userID,
+			UserIdentifier:    userID,
 			Outcome:   "failure",
 			Metadata: map[string]interface{}{
 				"error": err.Error(),
@@ -169,7 +169,7 @@ func (m *Manager) BeginRegistration(ctx context.Context, userID, userName, userD
 
 	sessionData := &SessionData{
 		Challenge:        challengeBytes,
-		UserID:           userID,
+		UserIdentifier:           userID,
 		ExpiresAt:        time.Now().Add(time.Duration(m.config.Timeout) * time.Millisecond),
 		UserVerification: m.config.UserVerification,
 	}
@@ -204,37 +204,22 @@ func (m *Manager) FinishRegistration(ctx context.Context, sessionData *SessionDa
 		return nil, fmt.Errorf("response cannot be nil")
 	}
 
-	// Check session expiry
-	// @mitigation Elevation of Privilege: Enforce session timeout to prevent replay attacks
-	if sessionData.IsExpired() {
-		_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
-			Timestamp: time.Now(),
-			EventType: "webauthn.registration.finish",
-			UserID:    sessionData.UserID,
-			Outcome:   "failure",
-			Metadata: map[string]interface{}{
-				"error": "session expired",
-			},
-		})
-		return nil, fmt.Errorf("session has expired")
-	}
-
 	// Load user
-	credentialIDs, err := m.config.CredentialStore.ListCredentials(ctx, sessionData.UserID)
+	credentialIDs, err := m.config.CredentialStore.ListCredentials(ctx, sessionData.UserIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list credentials: %w", err)
 	}
 
 	user := &User{
-		ID:          []byte(sessionData.UserID),
-		Name:        sessionData.UserID, // Applications should map this properly
-		DisplayName: sessionData.UserID,
+		ID:          []byte(sessionData.UserIdentifier),
+		Name:        sessionData.UserIdentifier, // Applications should map this properly
+		DisplayName: sessionData.UserIdentifier,
 		Credentials: make([]Credential, 0),
 	}
 
 	// Load existing credentials
 	for _, credID := range credentialIDs {
-		credData, err := m.config.CredentialStore.GetCredential(ctx, sessionData.UserID, credID)
+		credData, err := m.config.CredentialStore.GetCredential(ctx, sessionData.UserIdentifier, credID)
 		if err != nil {
 			continue
 		}
@@ -249,7 +234,7 @@ func (m *Manager) FinishRegistration(ctx context.Context, sessionData *SessionDa
 	// Encode challenge from bytes to base64 string
 	webSession := webauthn.SessionData{
 		Challenge:        base64.RawURLEncoding.EncodeToString(sessionData.Challenge),
-		UserID:           []byte(sessionData.UserID),
+		UserID:           []byte(sessionData.UserIdentifier),
 		UserVerification: protocol.UserVerificationRequirement(sessionData.UserVerification),
 	}
 
@@ -259,7 +244,7 @@ func (m *Manager) FinishRegistration(ctx context.Context, sessionData *SessionDa
 		_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 			Timestamp: time.Now(),
 			EventType: "webauthn.registration.finish",
-			UserID:    sessionData.UserID,
+			UserIdentifier:    sessionData.UserIdentifier,
 			Outcome:   "failure",
 			Metadata: map[string]interface{}{
 				"error": "attestation verification failed",
@@ -286,11 +271,11 @@ func (m *Manager) FinishRegistration(ctx context.Context, sessionData *SessionDa
 	}
 
 	credentialID := base64.RawURLEncoding.EncodeToString(cred.ID)
-	if err := m.config.CredentialStore.StoreCredential(ctx, sessionData.UserID, credentialID, credData); err != nil {
+	if err := m.config.CredentialStore.StoreCredential(ctx, sessionData.UserIdentifier, credentialID, credData); err != nil {
 		_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 			Timestamp: time.Now(),
 			EventType: "webauthn.registration.finish",
-			UserID:    sessionData.UserID,
+			UserIdentifier:    sessionData.UserIdentifier,
 			Outcome:   "failure",
 			Metadata: map[string]interface{}{
 				"error": "failed to store credential",
@@ -303,7 +288,7 @@ func (m *Manager) FinishRegistration(ctx context.Context, sessionData *SessionDa
 	_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 		Timestamp: time.Now(),
 		EventType: "webauthn.registration.finish",
-		UserID:    sessionData.UserID,
+		UserIdentifier:    sessionData.UserIdentifier,
 		Outcome:   "success",
 		Metadata: map[string]interface{}{
 			"credentialID": credentialID,
@@ -312,7 +297,7 @@ func (m *Manager) FinishRegistration(ctx context.Context, sessionData *SessionDa
 
 	result := &RegistrationResult{
 		Credential: cred,
-		UserID:     sessionData.UserID,
+		UserIdentifier:     sessionData.UserIdentifier,
 		Timestamp:  time.Now(),
 	}
 
@@ -343,7 +328,7 @@ func (m *Manager) BeginAuthentication(ctx context.Context, userID string) (*prot
 	_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 		Timestamp: time.Now(),
 		EventType: "webauthn.authentication.begin",
-		UserID:    userID,
+		UserIdentifier:    userID,
 		Outcome:   "initiated",
 		Metadata:  map[string]interface{}{},
 	})
@@ -362,7 +347,7 @@ func (m *Manager) BeginAuthentication(ctx context.Context, userID string) (*prot
 			_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 				Timestamp: time.Now(),
 				EventType: "webauthn.authentication.begin",
-				UserID:    userID,
+				UserIdentifier:    userID,
 				Outcome:   "failure",
 				Metadata: map[string]interface{}{
 					"error": "no credentials found",
@@ -416,7 +401,7 @@ func (m *Manager) BeginAuthentication(ctx context.Context, userID string) (*prot
 		_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 			Timestamp: time.Now(),
 			EventType: "webauthn.authentication.begin",
-			UserID:    userID,
+			UserIdentifier:    userID,
 			Outcome:   "failure",
 			Metadata: map[string]interface{}{
 				"error": err.Error(),
@@ -434,7 +419,7 @@ func (m *Manager) BeginAuthentication(ctx context.Context, userID string) (*prot
 
 	sessionData := &SessionData{
 		Challenge:          challengeBytes,
-		UserID:             userID,
+		UserIdentifier:             userID,
 		ExpiresAt:          time.Now().Add(time.Duration(m.config.Timeout) * time.Millisecond),
 		AllowedCredentials: allowedCredentials,
 		UserVerification:   m.config.UserVerification,
@@ -475,7 +460,7 @@ func (m *Manager) FinishAuthentication(ctx context.Context, sessionData *Session
 		_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 			Timestamp: time.Now(),
 			EventType: "webauthn.authentication.finish",
-			UserID:    sessionData.UserID,
+			UserIdentifier:    sessionData.UserIdentifier,
 			Outcome:   "failure",
 			Metadata: map[string]interface{}{
 				"error": "session expired",
@@ -485,7 +470,7 @@ func (m *Manager) FinishAuthentication(ctx context.Context, sessionData *Session
 	}
 
 	// For discoverable credentials, we need to find the user from the credential
-	userID := sessionData.UserID
+	userID := sessionData.UserIdentifier
 	if userID == "" {
 		// This would require iterating through all users, which is not scalable
 		// Applications should either:
@@ -538,7 +523,7 @@ func (m *Manager) FinishAuthentication(ctx context.Context, sessionData *Session
 		_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 			Timestamp: time.Now(),
 			EventType: "webauthn.authentication.finish",
-			UserID:    userID,
+			UserIdentifier:    userID,
 			Outcome:   "failure",
 			Metadata: map[string]interface{}{
 				"error": "assertion verification failed",
@@ -565,7 +550,7 @@ func (m *Manager) FinishAuthentication(ctx context.Context, sessionData *Session
 		_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 			Timestamp: time.Now(),
 			EventType: "webauthn.authentication.finish",
-			UserID:    userID,
+			UserIdentifier:    userID,
 			Outcome:   "failure",
 			Metadata: map[string]interface{}{
 				"error":          "sign counter anomaly detected",
@@ -589,7 +574,7 @@ func (m *Manager) FinishAuthentication(ctx context.Context, sessionData *Session
 		_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 			Timestamp: time.Now(),
 			EventType: "webauthn.authentication.finish",
-			UserID:    userID,
+			UserIdentifier:    userID,
 			Outcome:   "warning",
 			Metadata: map[string]interface{}{
 				"error": "failed to update credential",
@@ -602,7 +587,7 @@ func (m *Manager) FinishAuthentication(ctx context.Context, sessionData *Session
 	_ = m.config.AuditLogger.Log(ctx, core.AuditEvent{
 		Timestamp: time.Now(),
 		EventType: "webauthn.authentication.finish",
-		UserID:    userID,
+		UserIdentifier:    userID,
 		Outcome:   "success",
 		Metadata: map[string]interface{}{
 			"credentialID": credentialID,
@@ -610,7 +595,7 @@ func (m *Manager) FinishAuthentication(ctx context.Context, sessionData *Session
 	})
 
 	result := &AuthenticationResult{
-		UserID:       userID,
+		UserIdentifier:       userID,
 		CredentialID: credential.ID,
 		SignCount:    credential.Authenticator.SignCount,
 		Timestamp:    time.Now(),

@@ -2,7 +2,6 @@ package srp
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,7 +25,6 @@ func TestNewConfig(t *testing.T) {
 			wantErr: false,
 			check: func(t *testing.T, c *Config) {
 				assert.Equal(t, DefaultGroup, c.Group)
-				assert.Equal(t, DefaultSessionTimeout, c.SessionTimeout)
 				assert.Equal(t, DefaultSaltLength, c.SaltLength)
 				assert.NotNil(t, c.CredentialStore)
 				assert.NotNil(t, c.AuditLogger)
@@ -41,17 +39,6 @@ func TestNewConfig(t *testing.T) {
 			wantErr: false,
 			check: func(t *testing.T, c *Config) {
 				assert.Equal(t, 4, c.Group)
-			},
-		},
-		{
-			name: "Custom session timeout",
-			opts: []Option{
-				WithCredentialStore(store),
-				WithSessionTimeout(10 * time.Minute),
-			},
-			wantErr: false,
-			check: func(t *testing.T, c *Config) {
-				assert.Equal(t, 10*time.Minute, c.SessionTimeout)
 			},
 		},
 		{
@@ -75,22 +62,6 @@ func TestNewConfig(t *testing.T) {
 			opts: []Option{
 				WithCredentialStore(store),
 				WithGroup(99),
-			},
-			wantErr: true,
-		},
-		{
-			name: "Invalid session timeout (negative)",
-			opts: []Option{
-				WithCredentialStore(store),
-				WithSessionTimeout(-1 * time.Minute),
-			},
-			wantErr: true,
-		},
-		{
-			name: "Invalid session timeout (too long)",
-			opts: []Option{
-				WithCredentialStore(store),
-				WithSessionTimeout(2 * time.Hour),
 			},
 			wantErr: true,
 		},
@@ -136,7 +107,6 @@ func TestConfig_Validate(t *testing.T) {
 			name: "Valid config",
 			config: &Config{
 				Group:           3,
-				SessionTimeout:  5 * time.Minute,
 				SaltLength:      32,
 				CredentialStore: store,
 				AuditLogger:     memory.NewNopLogger(),
@@ -147,7 +117,6 @@ func TestConfig_Validate(t *testing.T) {
 			name: "Invalid group (too low)",
 			config: &Config{
 				Group:           2,
-				SessionTimeout:  5 * time.Minute,
 				SaltLength:      32,
 				CredentialStore: store,
 			},
@@ -157,7 +126,6 @@ func TestConfig_Validate(t *testing.T) {
 			name: "Invalid group (too high)",
 			config: &Config{
 				Group:           6,
-				SessionTimeout:  5 * time.Minute,
 				SaltLength:      32,
 				CredentialStore: store,
 			},
@@ -167,7 +135,6 @@ func TestConfig_Validate(t *testing.T) {
 			name: "Missing credential store",
 			config: &Config{
 				Group:          3,
-				SessionTimeout: 5 * time.Minute,
 				SaltLength:     32,
 			},
 			wantErr: true,
@@ -176,7 +143,6 @@ func TestConfig_Validate(t *testing.T) {
 			name: "Salt too short",
 			config: &Config{
 				Group:           3,
-				SessionTimeout:  5 * time.Minute,
 				SaltLength:      8,
 				CredentialStore: store,
 			},
@@ -207,11 +173,6 @@ func TestWithOptions(t *testing.T) {
 	err := WithGroup(4)(config)
 	assert.NoError(t, err)
 	assert.Equal(t, 4, config.Group)
-
-	// Apply WithSessionTimeout
-	err = WithSessionTimeout(15 * time.Minute)(config)
-	assert.NoError(t, err)
-	assert.Equal(t, 15*time.Minute, config.SessionTimeout)
 
 	// Apply WithSaltLength
 	err = WithSaltLength(48)(config)

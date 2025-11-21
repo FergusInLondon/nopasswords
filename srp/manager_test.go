@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,7 +77,7 @@ func TestManager_Register(t *testing.T) {
 		{
 			name: "Successful registration",
 			req: &RegistrationRequest{
-				UserID:   "test@example.com",
+				UserIdentifier:   "test@example.com",
 				Salt:     make([]byte, 32),
 				Verifier: make([]byte, 256),
 				Group:    3,
@@ -88,7 +87,7 @@ func TestManager_Register(t *testing.T) {
 		{
 			name: "Empty user ID",
 			req: &RegistrationRequest{
-				UserID:   "",
+				UserIdentifier:   "",
 				Salt:     make([]byte, 32),
 				Verifier: make([]byte, 256),
 				Group:    3,
@@ -99,7 +98,7 @@ func TestManager_Register(t *testing.T) {
 		{
 			name: "Salt too short",
 			req: &RegistrationRequest{
-				UserID:   "test@example.com",
+				UserIdentifier:   "test@example.com",
 				Salt:     make([]byte, 8),
 				Verifier: make([]byte, 256),
 				Group:    3,
@@ -110,7 +109,7 @@ func TestManager_Register(t *testing.T) {
 		{
 			name: "Empty verifier",
 			req: &RegistrationRequest{
-				UserID:   "test@example.com",
+				UserIdentifier:   "test@example.com",
 				Salt:     make([]byte, 32),
 				Verifier: []byte{},
 				Group:    3,
@@ -121,7 +120,7 @@ func TestManager_Register(t *testing.T) {
 		{
 			name: "Group mismatch",
 			req: &RegistrationRequest{
-				UserID:   "test@example.com",
+				UserIdentifier:   "test@example.com",
 				Salt:     make([]byte, 32),
 				Verifier: make([]byte, 256),
 				Group:    4,
@@ -146,7 +145,7 @@ func TestManager_Register(t *testing.T) {
 					assert.Contains(t, resp.Error, tt.wantMsg)
 				} else {
 					assert.True(t, resp.Success)
-					assert.Equal(t, tt.req.UserID, resp.UserID)
+					assert.Equal(t, tt.req.UserIdentifier, resp.UserIdentifier)
 				}
 			}
 		})
@@ -170,7 +169,7 @@ func TestManager_AuthenticationFlow(t *testing.T) {
 	salt, verifier := computeVerifier(manager.group, userID, password)
 
 	regReq := &RegistrationRequest{
-		UserID:   userID,
+		UserIdentifier:   userID,
 		Salt:     salt,
 		Verifier: verifier,
 		Group:    3,
@@ -182,7 +181,7 @@ func TestManager_AuthenticationFlow(t *testing.T) {
 
 	// Step 2: Begin authentication
 	beginReq := &AuthenticationBeginRequest{
-		UserID: userID,
+		UserIdentifier: userID,
 		Group:  3,
 	}
 
@@ -197,7 +196,7 @@ func TestManager_AuthenticationFlow(t *testing.T) {
 
 	// Step 4: Finish authentication
 	finishReq := &AuthenticationFinishRequest{
-		UserID: userID,
+		UserIdentifier: userID,
 		A:      A,
 		M1:     M1,
 	}
@@ -209,7 +208,7 @@ func TestManager_AuthenticationFlow(t *testing.T) {
 
 	assert.True(t, finishResp.Success)
 	assert.NotEmpty(t, finishResp.M2)
-	assert.Equal(t, userID, sessionKey.UserID)
+	assert.Equal(t, userID, sessionKey.UserIdentifier)
 
 	// Verify session keys match
 	assert.Equal(t, clientKey, sessionKey.Key)
@@ -232,7 +231,7 @@ func TestManager_AuthenticationFlow_WrongPassword(t *testing.T) {
 	salt, verifier := computeVerifier(manager.group, userID, correctPassword)
 
 	regReq := &RegistrationRequest{
-		UserID:   userID,
+		UserIdentifier:   userID,
 		Salt:     salt,
 		Verifier: verifier,
 		Group:    3,
@@ -243,7 +242,7 @@ func TestManager_AuthenticationFlow_WrongPassword(t *testing.T) {
 
 	// Begin authentication
 	beginReq := &AuthenticationBeginRequest{
-		UserID: userID,
+		UserIdentifier: userID,
 	}
 
 	beginResp, err := manager.BeginAuthentication(ctx, beginReq)
@@ -253,7 +252,7 @@ func TestManager_AuthenticationFlow_WrongPassword(t *testing.T) {
 	A, M1, _ := computeClientProof(manager.group, userID, wrongPassword, beginResp.Salt, beginResp.B)
 
 	finishReq := &AuthenticationFinishRequest{
-		UserID: userID,
+		UserIdentifier: userID,
 		A:      A,
 		M1:     M1,
 	}
@@ -278,62 +277,11 @@ func TestManager_BeginAuthentication_UserNotFound(t *testing.T) {
 	ctx := context.Background()
 
 	beginReq := &AuthenticationBeginRequest{
-		UserID: "nonexistent@example.com",
+		UserIdentifier: "nonexistent@example.com",
 	}
 
 	_, err = manager.BeginAuthentication(ctx, beginReq)
 	assert.Error(t, err)
-}
-
-func TestManager_FinishAuthentication_SessionExpired(t *testing.T) {
-	store := memory.NewCredentialStore()
-	manager, err := NewManager(
-		WithCredentialStore(store),
-		WithGroup(3),
-		WithSessionTimeout(1*time.Millisecond), // Very short timeout
-	)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	userID := "test@example.com"
-	password := "test-password"
-
-	// Register user
-	salt, verifier := computeVerifier(manager.group, userID, password)
-	regReq := &RegistrationRequest{
-		UserID:   userID,
-		Salt:     salt,
-		Verifier: verifier,
-		Group:    3,
-	}
-	_, err = manager.Register(ctx, regReq)
-	require.NoError(t, err)
-
-	// Begin authentication
-	beginReq := &AuthenticationBeginRequest{
-		UserID: userID,
-	}
-	beginResp, err := manager.BeginAuthentication(ctx, beginReq)
-	require.NoError(t, err)
-
-	// Wait for session to expire
-	time.Sleep(10 * time.Millisecond)
-
-	// Try to finish authentication
-	A, M1, _ := computeClientProof(manager.group, userID, password, beginResp.Salt, beginResp.B)
-	finishReq := &AuthenticationFinishRequest{
-		UserID: userID,
-		A:      A,
-		M1:     M1,
-	}
-
-	finishResp, sessionKey, err := manager.FinishAuthentication(ctx, finishReq)
-	require.NoError(t, err)
-	require.NotNil(t, finishResp)
-
-	assert.False(t, finishResp.Success)
-	assert.Contains(t, finishResp.Error, "expired")
-	assert.Nil(t, sessionKey)
 }
 
 func TestManager_FinishAuthentication_InvalidA(t *testing.T) {
@@ -351,7 +299,7 @@ func TestManager_FinishAuthentication_InvalidA(t *testing.T) {
 	// Register user
 	salt, verifier := computeVerifier(manager.group, userID, password)
 	regReq := &RegistrationRequest{
-		UserID:   userID,
+		UserIdentifier:   userID,
 		Salt:     salt,
 		Verifier: verifier,
 		Group:    3,
@@ -361,14 +309,14 @@ func TestManager_FinishAuthentication_InvalidA(t *testing.T) {
 
 	// Begin authentication
 	beginReq := &AuthenticationBeginRequest{
-		UserID: userID,
+		UserIdentifier: userID,
 	}
 	_, err = manager.BeginAuthentication(ctx, beginReq)
 	require.NoError(t, err)
 
 	// Send invalid A (A = 0 mod N)
 	finishReq := &AuthenticationFinishRequest{
-		UserID: userID,
+		UserIdentifier: userID,
 		A:      manager.group.N.Bytes(), // A = N, so A mod N = 0
 		M1:     make([]byte, 32),
 	}

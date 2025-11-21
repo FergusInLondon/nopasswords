@@ -15,7 +15,7 @@ func TestNewAuditEvent(t *testing.T) {
 	assert.NotEmpty(t, event.EventID, "EventID should be generated")
 	assert.Equal(t, EventAuthSuccess, event.EventType)
 	assert.Equal(t, "webauthn", event.Method)
-	assert.Equal(t, "user123", event.UserID)
+	assert.Equal(t, "user123", event.UserIdentifier)
 	assert.Equal(t, OutcomeSuccess, event.Outcome)
 	assert.NotZero(t, event.Timestamp)
 	assert.NotNil(t, event.Metadata)
@@ -26,7 +26,7 @@ func TestAuditEventBuilder(t *testing.T) {
 		event := NewAuditEventBuilder().
 			WithEventType(EventAuthSuccess).
 			WithMethod("webauthn").
-			WithUserID("user123").
+			WithUserIdentifier("user123").
 			WithCredentialID("cred456").
 			WithOutcome(OutcomeSuccess).
 			WithReason("valid_signature").
@@ -37,7 +37,7 @@ func TestAuditEventBuilder(t *testing.T) {
 		assert.NotEmpty(t, event.EventID)
 		assert.Equal(t, EventAuthSuccess, event.EventType)
 		assert.Equal(t, "webauthn", event.Method)
-		assert.Equal(t, "user123", event.UserID)
+		assert.Equal(t, "user123", event.UserIdentifier)
 		assert.Equal(t, "cred456", event.CredentialID)
 		assert.Equal(t, OutcomeSuccess, event.Outcome)
 		assert.Equal(t, "valid_signature", event.Reason)
@@ -94,14 +94,14 @@ func TestAuditEventBuilder(t *testing.T) {
 		builder.
 			WithEventType(EventTokenGenerate).
 			WithMethod("signed_token").
-			WithUserID("user789").
+			WithUserIdentifier("user789").
 			WithOutcome(OutcomeSuccess)
 
 		event := builder.Build()
 
 		assert.Equal(t, EventTokenGenerate, event.EventType)
 		assert.Equal(t, "signed_token", event.Method)
-		assert.Equal(t, "user789", event.UserID)
+		assert.Equal(t, "user789", event.UserIdentifier)
 		assert.Equal(t, OutcomeSuccess, event.Outcome)
 	})
 }
@@ -190,7 +190,7 @@ func TestHTTPContextToAuditEvent(t *testing.T) {
 		builder := NewAuditEventBuilder().
 			WithEventType(EventAuthAttempt).
 			WithMethod("webauthn").
-			WithUserID("user123")
+			WithUserIdentifier("user123")
 
 		HTTPContextToAuditEvent(req, builder)
 
@@ -208,7 +208,7 @@ func TestHTTPContextToAuditEvent(t *testing.T) {
 
 		builder := NewAuditEventBuilder().
 			WithEventType(EventAuthSuccess).
-			WithUserID("user456").
+			WithUserIdentifier("user456").
 			WithMetadata("existing_key", "existing_value")
 
 		HTTPContextToAuditEvent(req, builder)
@@ -217,7 +217,7 @@ func TestHTTPContextToAuditEvent(t *testing.T) {
 
 		// Should preserve existing fields
 		assert.Equal(t, EventAuthSuccess, event.EventType)
-		assert.Equal(t, "user456", event.UserID)
+		assert.Equal(t, "user456", event.UserIdentifier)
 		assert.Equal(t, "existing_value", event.Metadata["existing_key"])
 
 		// Should add HTTP context
@@ -228,25 +228,25 @@ func TestHTTPContextToAuditEvent(t *testing.T) {
 
 func TestExtractUserIDFromContext(t *testing.T) {
 	type contextKey string
-	const UserIDKey contextKey = "user_id"
+	const UserIdentifierKey contextKey = "user_id"
 
 	t.Run("extracts user ID from context", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), UserIDKey, "user123")
-		userID := ExtractUserIDFromContext(ctx, UserIDKey)
+		ctx := context.WithValue(context.Background(), UserIdentifierKey, "user123")
+		userID := ExtractUserIDFromContext(ctx, UserIdentifierKey)
 
 		assert.Equal(t, "user123", userID)
 	})
 
 	t.Run("returns empty string when not found", func(t *testing.T) {
 		ctx := context.Background()
-		userID := ExtractUserIDFromContext(ctx, UserIDKey)
+		userID := ExtractUserIDFromContext(ctx, UserIdentifierKey)
 
 		assert.Equal(t, "", userID)
 	})
 
 	t.Run("returns empty string when wrong type", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), UserIDKey, 123)
-		userID := ExtractUserIDFromContext(ctx, UserIDKey)
+		ctx := context.WithValue(context.Background(), UserIdentifierKey, 123)
+		userID := ExtractUserIDFromContext(ctx, UserIdentifierKey)
 
 		assert.Equal(t, "", userID)
 	})
@@ -260,14 +260,14 @@ func TestAuditEventBuilder_Integration(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "198.51.100.42")
 
 	type contextKey string
-	const UserIDKey contextKey = "user_id"
-	ctx := context.WithValue(req.Context(), UserIDKey, "user789")
+	const UserIdentifierKey contextKey = "user_id"
+	ctx := context.WithValue(req.Context(), UserIdentifierKey, "user789")
 
 	// Build audit event using helpers
 	builder := NewAuditEventBuilder().
 		WithEventType(EventAuthSuccess).
 		WithMethod("webauthn").
-		WithUserID(ExtractUserIDFromContext(ctx, UserIDKey)).
+		WithUserIdentifier(ExtractUserIDFromContext(ctx, UserIdentifierKey)).
 		WithCredentialID("cred123").
 		WithOutcome(OutcomeSuccess).
 		WithReason("valid_signature")
@@ -284,7 +284,7 @@ func TestAuditEventBuilder_Integration(t *testing.T) {
 	assert.NotZero(t, event.Timestamp)
 	assert.Equal(t, EventAuthSuccess, event.EventType)
 	assert.Equal(t, "webauthn", event.Method)
-	assert.Equal(t, "user789", event.UserID)
+	assert.Equal(t, "user789", event.UserIdentifier)
 	assert.Equal(t, "cred123", event.CredentialID)
 	assert.Equal(t, OutcomeSuccess, event.Outcome)
 	assert.Equal(t, "valid_signature", event.Reason)
@@ -307,7 +307,7 @@ func BenchmarkAuditEventBuilder(b *testing.B) {
 		_ = NewAuditEventBuilder().
 			WithEventType(EventAuthSuccess).
 			WithMethod("webauthn").
-			WithUserID("user123").
+			WithUserIdentifier("user123").
 			WithOutcome(OutcomeSuccess).
 			Build()
 	}

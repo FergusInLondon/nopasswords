@@ -13,7 +13,7 @@ func TestAuthResult(t *testing.T) {
 
 	result := AuthResult{
 		Success:      true,
-		UserID:       "user123",
+		UserIdentifier:       "user123",
 		CredentialID: "cred456",
 		Method:       "webauthn",
 		Timestamp:    now,
@@ -24,7 +24,7 @@ func TestAuthResult(t *testing.T) {
 	}
 
 	assert.True(t, result.Success)
-	assert.Equal(t, "user123", result.UserID)
+	assert.Equal(t, "user123", result.UserIdentifier)
 	assert.Equal(t, "cred456", result.CredentialID)
 	assert.Equal(t, "webauthn", result.Method)
 	assert.Equal(t, now, result.Timestamp)
@@ -40,7 +40,7 @@ func TestAuditEvent(t *testing.T) {
 		Timestamp:    now,
 		EventType:    EventAuthSuccess,
 		Method:       "srp",
-		UserID:       "user456",
+		UserIdentifier:       "user456",
 		CredentialID: "cred789",
 		Outcome:      OutcomeSuccess,
 		Reason:       "valid_password",
@@ -55,7 +55,7 @@ func TestAuditEvent(t *testing.T) {
 	assert.Equal(t, now, event.Timestamp)
 	assert.Equal(t, EventAuthSuccess, event.EventType)
 	assert.Equal(t, "srp", event.Method)
-	assert.Equal(t, "user456", event.UserID)
+	assert.Equal(t, "user456", event.UserIdentifier)
 	assert.Equal(t, "cred789", event.CredentialID)
 	assert.Equal(t, OutcomeSuccess, event.Outcome)
 	assert.Equal(t, "valid_password", event.Reason)

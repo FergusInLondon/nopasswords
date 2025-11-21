@@ -47,7 +47,7 @@ func TestMultiLogger_Log(t *testing.T) {
 		EventID:   "event123",
 		Timestamp: time.Now(),
 		EventType: core.EventAuthSuccess,
-		UserID:    "user456",
+		UserIdentifier:    "user456",
 		Outcome:   core.OutcomeSuccess,
 	}
 
@@ -275,7 +275,7 @@ func TestFilteredLogger_UserFilter(t *testing.T) {
 	event1 := core.AuditEvent{
 		EventID:   "event1",
 		Timestamp: time.Now(),
-		UserID:    "user123",
+		UserIdentifier:    "user123",
 	}
 	err := filteredLogger.Log(ctx, event1)
 	require.NoError(t, err)
@@ -284,7 +284,7 @@ func TestFilteredLogger_UserFilter(t *testing.T) {
 	event2 := core.AuditEvent{
 		EventID:   "event2",
 		Timestamp: time.Now(),
-		UserID:    "user789",
+		UserIdentifier:    "user789",
 	}
 	err = filteredLogger.Log(ctx, event2)
 	require.NoError(t, err)

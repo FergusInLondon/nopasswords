@@ -10,9 +10,9 @@ type AuthResult struct {
 	// Success indicates whether authentication succeeded.
 	Success bool
 
-	// UserID is the identifier of the authenticated user.
+	// UserIdentifier is the identifier of the authenticated user.
 	// Only populated when Success is true.
-	UserID string
+	UserIdentifier string
 
 	// CredentialID identifies which credential was used for authentication.
 	// This is relevant for methods that support multiple credentials per user (e.g., WebAuthn).
@@ -55,9 +55,9 @@ type AuditEvent struct {
 	// Method indicates the authentication method involved (e.g., "webauthn", "srp", "signed_token").
 	Method string
 
-	// UserID identifies the user associated with this event.
+	// UserIdentifier identifies the user associated with this event.
 	// May be empty for anonymous operations or registration attempts.
-	UserID string
+	UserIdentifier string
 
 	// CredentialID identifies the credential involved, if applicable.
 	CredentialID string

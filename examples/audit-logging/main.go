@@ -59,7 +59,7 @@ func example1SimpleStdoutLogging() {
 		Timestamp: time.Now(),
 		EventType: core.EventAuthSuccess,
 		Method:    "webauthn",
-		UserID:    "user123",
+		UserIdentifier:    "user123",
 		Outcome:   core.OutcomeSuccess,
 		Metadata:  map[string]interface{}{"example": 1},
 	}
@@ -90,7 +90,7 @@ func example2FileLogging() {
 			Timestamp: time.Now(),
 			EventType: core.EventAuthSuccess,
 			Method:    "srp",
-			UserID:    "user456",
+			UserIdentifier:    "user456",
 			Outcome:   core.OutcomeSuccess,
 		},
 		{
@@ -98,7 +98,7 @@ func example2FileLogging() {
 			Timestamp: time.Now(),
 			EventType: core.EventAuthFailure,
 			Method:    "srp",
-			UserID:    "user456",
+			UserIdentifier:    "user456",
 			Outcome:   core.OutcomeFailure,
 			Reason:    "invalid_password",
 		},
@@ -131,7 +131,7 @@ func example3MultiLogger() {
 		Timestamp: time.Now(),
 		EventType: core.EventTokenGenerate,
 		Method:    "signed_token",
-		UserID:    "user789",
+		UserIdentifier:    "user789",
 		Outcome:   core.OutcomeSuccess,
 	}
 
@@ -157,7 +157,7 @@ func example4FilteredLogging() {
 		Timestamp: time.Now(),
 		EventType: core.EventAuthFailure,
 		Method:    "webauthn",
-		UserID:    "user999",
+		UserIdentifier:    "user999",
 		Outcome:   core.OutcomeFailure,
 		Reason:    "invalid_signature",
 	}
@@ -169,7 +169,7 @@ func example4FilteredLogging() {
 		Timestamp: time.Now(),
 		EventType: core.EventAuthSuccess,
 		Method:    "webauthn",
-		UserID:    "user999",
+		UserIdentifier:    "user999",
 		Outcome:   core.OutcomeSuccess,
 	}
 	_ = filteredLogger.Log(ctx, event2)
@@ -195,7 +195,7 @@ func example5AsyncLogging() {
 			Timestamp: time.Now(),
 			EventType: core.EventAuthSuccess,
 			Method:    "webauthn",
-			UserID:    fmt.Sprintf("user%d", i),
+			UserIdentifier:    fmt.Sprintf("user%d", i),
 			Outcome:   core.OutcomeSuccess,
 		}
 		_ = asyncLogger.Log(ctx, event)
@@ -276,7 +276,7 @@ func example7EventBuilder() {
 	event := core.NewAuditEventBuilder().
 		WithEventType(core.EventAuthSuccess).
 		WithMethod("webauthn").
-		WithUserID("user-builder").
+		WithUserIdentifier("user-builder").
 		WithCredentialID("cred-123").
 		WithOutcome(core.OutcomeSuccess).
 		WithReason("valid_signature").

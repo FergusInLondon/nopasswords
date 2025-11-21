@@ -13,6 +13,9 @@ import (
 	"go.fergus.london/nopasswords/srp"
 )
 
+// TODO: We can rip all this session stuff out when we refine
+//  the SRP interface.
+
 // sessionStore holds authentication sessions temporarily
 // WARNING: In-memory storage is for demo purposes only!
 // Production applications should use persistent, secure storage.
@@ -41,10 +44,17 @@ func main() {
 
 	sessions := &sessionStore{}
 
-	// HTTP handlers
-	http.HandleFunc("/api/srp/register", corsMiddleware(handleRegister(manager)))
-	http.HandleFunc("/api/srp/authenticate/begin", corsMiddleware(handleAuthBegin(manager)))
-	http.HandleFunc("/api/srp/authenticate/finish", corsMiddleware(handleAuthFinish(manager, sessions)))
+	// SRP Handlers
+	http.HandleFunc("/api/srp/register", corsMiddleware(
+		m.AttestationHandlerFunc(attestationHandler)
+	))
+	http.HandleFunc("/api/srp/authenticate/begin", corsMiddleware(
+		m.AssertionBeginHandler(assertionInitiationHandler)
+	))
+	http.HandleFunc("/api/srp/authenticate/finish", corsMiddleware(
+		m.AssertionFinishHandler(assertionCompletionHandler)
+	))
+
 	http.HandleFunc("/api/session", corsMiddleware(handleSession(sessions)))
 
 	// Serve static files
@@ -76,84 +86,23 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func handleRegister(manager *srp.Manager) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
+func attestationHandler(w http.RequestWriter, r *http.Request, *srp.RegistrationRequest) bool {
+	fmt.Println("Successfully attested credentials for user!")
 
-		var req srp.RegistrationRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			fmt.Println(err)
-			http.Error(w, "Invalid request", http.StatusBadRequest)
-			return
-		}
-
-		resp, err := manager.Register(context.Background(), &req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
-	}
+	return true // allow default response
 }
 
-func handleAuthBegin(manager *srp.Manager) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
+func assertionInitiationHandler(w http.RequestWriter, r *http.Request, *srp.RegistrationRequest) bool {
+	fmt.Println("Starting assertion process")
 
-		var req srp.AuthenticationBeginRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
-			return
-		}
+	// This would be where we get the salt from the database.
 
-		resp, err := manager.BeginAuthentication(context.Background(), &req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
-	}
+	return true // allow default response
 }
 
-func handleAuthFinish(manager *srp.Manager, sessions *sessionStore) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		var req srp.AuthenticationFinishRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
-			return
-		}
-
-		resp, sessionKey, err := manager.FinishAuthentication(context.Background(), &req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// If authentication succeeded, store session
-		if resp.Success && sessionKey != nil {
-			sessions.sessions.Store(req.UserID, sessionData{
-				SessionKey: sessionKey.Key,
-			})
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
-	}
+func assertionCompletionHandler(w http.RequestWirter, r *http.Request, *srp.SuccessfulAssertionCtx) bool {
+	fmt.Println("Successfully confirmed users password!")
+	return true
 }
 
 func handleSession(sessions *sessionStore) http.HandlerFunc {

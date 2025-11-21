@@ -181,7 +181,7 @@ func UserFilter(userIDs ...string) FilterFunc {
 	}
 
 	return func(event core.AuditEvent) bool {
-		return userMap[event.UserID]
+		return userMap[event.UserIdentifier]
 	}
 }
 

@@ -38,19 +38,9 @@ type Config struct {
 	// @risk Denial of Service: Larger groups require more CPU time.
 	Group int
 
-	// SessionTimeout is how long authentication sessions remain valid.
-	// Sessions must expire to prevent resource exhaustion.
-	//
-	// @mitigation Denial of Service: Timeout prevents unbounded session storage.
-	SessionTimeout time.Duration
-
 	// SaltLength is the length of the random salt in bytes (minimum 16).
 	// Larger salts provide better security against rainbow table attacks.
 	SaltLength int
-
-	// CredentialStore is the storage backend for SRP verifiers.
-	// Required: Must be provided before use.
-	CredentialStore core.CredentialStore
 
 	// AuditLogger receives security audit events.
 	// Optional: Defaults to no-op logger if not provided.
@@ -78,27 +68,6 @@ func WithGroup(groupID int) Option {
 	}
 }
 
-// WithSessionTimeout sets the timeout for authentication sessions.
-//
-// Sessions older than this duration will be considered expired and rejected.
-// Default: 5 minutes
-//
-// Example:
-//
-//	manager := NewManager(WithSessionTimeout(10 * time.Minute))
-func WithSessionTimeout(timeout time.Duration) Option {
-	return func(c *Config) error {
-		if timeout <= 0 {
-			return fmt.Errorf("session timeout must be positive")
-		}
-		if timeout > 1*time.Hour {
-			return fmt.Errorf("session timeout cannot exceed 1 hour")
-		}
-		c.SessionTimeout = timeout
-		return nil
-	}
-}
-
 // WithSaltLength sets the length of the random salt in bytes.
 //
 // Minimum: 16 bytes (128 bits)
@@ -116,24 +85,6 @@ func WithSaltLength(length int) Option {
 			return fmt.Errorf("salt length cannot exceed 256 bytes")
 		}
 		c.SaltLength = length
-		return nil
-	}
-}
-
-// WithCredentialStore sets the credential storage backend.
-//
-// Required: Must be provided to store SRP verifiers.
-//
-// Example:
-//
-//	store := memory.NewMemoryCredentialStore()
-//	manager := NewManager(WithCredentialStore(store))
-func WithCredentialStore(store core.CredentialStore) Option {
-	return func(c *Config) error {
-		if store == nil {
-			return fmt.Errorf("credential store cannot be nil")
-		}
-		c.CredentialStore = store
 		return nil
 	}
 }
@@ -164,7 +115,6 @@ func NewConfig(opts ...Option) (*Config, error) {
 	// Default configuration
 	config := &Config{
 		Group:          DefaultGroup,
-		SessionTimeout: DefaultSessionTimeout,
 		SaltLength:     DefaultSaltLength,
 		AuditLogger:    memory.NewNopLogger(),
 	}
@@ -191,25 +141,12 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("invalid group ID: %d (valid: 3, 4, 5)", c.Group)
 	}
 
-	// Validate session timeout
-	if c.SessionTimeout <= 0 {
-		return fmt.Errorf("session timeout must be positive")
-	}
-	if c.SessionTimeout > 1*time.Hour {
-		return fmt.Errorf("session timeout cannot exceed 1 hour")
-	}
-
 	// Validate salt length
 	if c.SaltLength < MinSaltLength {
 		return fmt.Errorf("salt length must be at least %d bytes", MinSaltLength)
 	}
 	if c.SaltLength > 256 {
 		return fmt.Errorf("salt length cannot exceed 256 bytes")
-	}
-
-	// Credential store is required
-	if c.CredentialStore == nil {
-		return fmt.Errorf("credential store is required (use WithCredentialStore)")
 	}
 
 	// Audit logger defaults to no-op if not set

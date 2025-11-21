@@ -58,7 +58,7 @@ func TestFileLogger_Log(t *testing.T) {
 		Timestamp: time.Now(),
 		EventType: core.EventAuthSuccess,
 		Method:    "webauthn",
-		UserID:    "user456",
+		UserIdentifier:    "user456",
 		Outcome:   core.OutcomeSuccess,
 		Metadata:  map[string]interface{}{"test": "value"},
 	}
@@ -81,7 +81,7 @@ func TestFileLogger_Log(t *testing.T) {
 	assert.Equal(t, event.EventID, logged.EventID)
 	assert.Equal(t, event.EventType, logged.EventType)
 	assert.Equal(t, event.Method, logged.Method)
-	assert.Equal(t, event.UserID, logged.UserID)
+	assert.Equal(t, event.UserIdentifier, logged.UserIdentifier)
 	assert.Equal(t, event.Outcome, logged.Outcome)
 }
 
