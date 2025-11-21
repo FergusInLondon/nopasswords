@@ -81,7 +81,7 @@ type AttestationSucccessFunc func(Parameters)
 // @risk Repudiation: Registration events are logged for audit purposes.
 func (m *Manager) AttestationHandlerFunc(h AttestationSucccessFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		eventID := generateEventID()
+		eventID := core.GenerateEventID()
 		startTime := time.Now()
 		ctx := r.Context()
 
@@ -146,7 +146,7 @@ func (m *Manager) AttestationHandlerFunc(h AttestationSucccessFunc) http.Handler
 		}
 
 		// Create verifier record
-		assertionParams := &Parameters{ // TODO: Thse structs are now identical. Embed Verifier within req?
+		assertionParams := &Parameters{
 			UserIdentifier: req.UserIdentifier,
 			Salt:           req.Salt,
 			Verifier:       req.Verifier,
@@ -165,7 +165,7 @@ func (m *Manager) AttestationHandlerFunc(h AttestationSucccessFunc) http.Handler
 		h(*assertionParams)
 
 		// Log successful registration (this should be deferred from the start, and the duration of all requests logged.)
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, credentialID, core.OutcomeSuccess, "", map[string]interface{}{
+		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "none", core.OutcomeSuccess, "", map[string]interface{}{
 			"group":    req.Group,
 			"duration": time.Since(startTime).Milliseconds(),
 		})

@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"time"
 
@@ -21,13 +23,13 @@ import (
 //	)
 func NewAuditEvent(eventType, method, userIdentifier, outcome string) AuditEvent {
 	return AuditEvent{
-		EventID:   uuid.New().String(),
-		Timestamp: time.Now().UTC(),
-		EventType: eventType,
-		Method:    method,
-		UserIdentifier:    userIdentifier,
-		Outcome:   outcome,
-		Metadata:  make(map[string]interface{}),
+		EventID:        uuid.New().String(),
+		Timestamp:      time.Now().UTC(),
+		EventType:      eventType,
+		Method:         method,
+		UserIdentifier: userIdentifier,
+		Outcome:        outcome,
+		Metadata:       make(map[string]interface{}),
 	}
 }
 
@@ -235,4 +237,11 @@ func ExtractUserIDFromContext(ctx context.Context, key interface{}) string {
 		return userID
 	}
 	return ""
+}
+
+// GenerateEventID generates a unique event ID for event logging.
+func GenerateEventID() string {
+	randomBytes := make([]byte, 16)
+	rand.Read(randomBytes)
+	return hex.EncodeToString(randomBytes)
 }

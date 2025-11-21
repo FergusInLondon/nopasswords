@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"time"
@@ -133,12 +132,4 @@ func padBytes(data []byte, length int) []byte {
 	padded := make([]byte, length)
 	copy(padded[length-len(data):], data)
 	return padded
-}
-
-// generateEventID generates a unique event ID for audit logging.
-// TODO: Why cant this be handled within the core module?
-func generateEventID() string {
-	randomBytes := make([]byte, 16)
-	rand.Read(randomBytes)
-	return hex.EncodeToString(randomBytes)
 }

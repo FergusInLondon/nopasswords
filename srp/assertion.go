@@ -90,9 +90,18 @@ type AssertionInitiationResponse struct {
 // @risk Denial of Service: Sessions must expire to prevent resource exhaustion.
 func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		eventID := generateEventID()
+		eventStream := newBuildableEvent(
+			r.Context(), m.config.AuditLogger, core.GenerateEventID(),
+		)
+		eventOutcome := core.OutcomeFailure
+
 		startTime := time.Now()
-		ctx := r.Context()
+		defer func() {
+			eventStream.log(core.EventAuthAttempt, eventOutcome, "assertion_initiated", map[string]interface{}{
+				"group":    m.config.Group,
+				"duration": time.Since(startTime).Milliseconds(),
+			})
+		}()
 
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -106,14 +115,15 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 		}
 
 		if req.UserIdentifier == "" {
-			m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, "", core.OutcomeFailure, "empty_user_id", nil)
+			eventStream.log(core.EventAuthAttempt, eventOutcome, "empty_user_id", nil)
 			http.Error(w, "user identifier cannot be empty", http.StatusBadRequest)
 			return
 		}
+		eventStream.withUserIdentifier(req.UserIdentifier)
 
 		assertionParams, err := m.config.Store.GetForUserIdentifier(req.UserIdentifier)
 		if err != nil {
-			m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, "", core.OutcomeFailure, "no_assertion_params", nil)
+			eventStream.log(core.EventAuthAttempt, eventOutcome, "no_assertion_params", nil)
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -121,10 +131,12 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 		// IDEA: I mean, we support multiple groups. Should we have a way of allowing this?
 		//  i.e. for in-place upgrades?
 		if assertionParams.Group != m.config.Group {
-			m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, req.UserIdentifier, core.OutcomeFailure, "group_mismatch", map[string]interface{}{
-				"stored_group":   assertionParams.Group,
-				"expected_group": m.config.Group,
-			})
+			eventStream.log(
+				core.EventAuthAttempt, eventOutcome, "group_mismatch", map[string]interface{}{
+					"stored_group":   assertionParams.Group,
+					"expected_group": m.config.Group,
+				},
+			)
 			http.Error(w, fmt.Sprintf("group mismatch: expected %d, got %d", m.config.Group, assertionParams.Group), http.StatusUnauthorized)
 			return
 		}
@@ -135,7 +147,7 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 		// session key prediction.
 		b, err := generateRandomBigInt(256)
 		if err != nil {
-			m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, req.UserIdentifier, core.OutcomeError, "random_generation_failed", nil)
+			eventStream.log(core.EventAuthAttempt, eventOutcome, "random_generation_failed", nil)
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -164,12 +176,7 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 			v:           v,
 		})
 
-		// Log authentication begin
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, req.UserIdentifier, core.OutcomeSuccess, "begin", map[string]interface{}{
-			"group":    m.config.Group,
-			"duration": time.Since(startTime).Milliseconds(),
-		})
-
+		eventOutcome = core.OutcomeSuccess
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(&AssertionInitiationResponse{
 			Salt:  assertionParams.Salt,
@@ -243,9 +250,18 @@ type AssertionSuccessFunc func(string, http.ResponseWriter, *http.Request) error
 // @mitigation Elevation of Privilege: Session key is derived correctly per RFC5054.
 func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		eventID := generateEventID()
+		eventStream := newBuildableEvent(
+			r.Context(), m.config.AuditLogger, core.GenerateEventID(),
+		)
+		eventOutcome := core.OutcomeFailure
+
 		startTime := time.Now()
-		ctx := r.Context()
+		defer func() {
+			eventStream.log(core.EventAuthSuccess, eventOutcome, "assertion_complete", map[string]interface{}{
+				"group":    m.config.Group,
+				"duration": time.Since(startTime).Milliseconds(),
+			})
+		}()
 
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -259,14 +275,16 @@ func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.Hand
 		}
 
 		if req.UserIdentifier == "" {
-			m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, "", core.OutcomeFailure, "empty_user_id", nil)
+			eventStream.log(core.EventAuthAttempt, eventOutcome, "empty_user_id", nil)
 			http.Error(w, "user identifier cannot be empty", http.StatusUnauthorized)
 			return
 		}
 
+		eventStream.withUserIdentifier(req.UserIdentifier)
+
 		assertionState, err := m.config.Cache.GetForUserIdentifier(req.UserIdentifier)
 		if err != nil {
-			m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, "", core.OutcomeFailure, "no_assertion_state", nil)
+			eventStream.log(core.EventAuthAttempt, eventOutcome, "no_assertion_state", nil)
 			http.Error(w, err.Error(), http.StatusUnauthorized) // TODO sanitise the errors we're sending out!
 			return
 		}
@@ -280,7 +298,7 @@ func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.Hand
 		// @mitigation Tampering: Reject invalid A values that could compromise security
 		Amod := new(big.Int).Mod(A, m.group.N)
 		if Amod.Cmp(big.NewInt(0)) == 0 {
-			m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, "", core.OutcomeFailure, "invalid_client_ephemeral", nil)
+			eventStream.log(core.EventAuthAttempt, eventOutcome, "invalid_client_ephemeral", nil)
 			http.Error(w, "invalid client ephemeral value", http.StatusUnauthorized)
 			return
 		}
@@ -305,7 +323,7 @@ func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.Hand
 		// @mitigation Information Disclosure: Constant-time comparison prevents timing attacks
 		// that could leak information about the password
 		if subtle.ConstantTimeCompare(req.M1, expectedM1) != 1 {
-			m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, m.generateCredentialID(req.UserIdentifier), core.OutcomeFailure, "invalid_proof", map[string]interface{}{
+			eventStream.log(core.EventAuthFailure, eventOutcome, "invalid_proof", map[string]interface{}{
 				"duration": time.Since(startTime).Milliseconds(),
 			})
 			http.Error(w, "authentication failed: invalid proof", http.StatusUnauthorized)
@@ -316,17 +334,14 @@ func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.Hand
 		M2 := m.computeM2(req.A, req.M1, K)
 
 		if err := h(req.UserIdentifier, w, r); err != nil {
-			// TODO: Log
+			eventStream.log(core.EventAuthFailure, eventOutcome, "callback_failure", map[string]interface{}{
+				"reason": err.Error(),
+			})
+
 			http.Error(w, "unknown error", http.StatusInternalServerError)
 		}
 
-		// Log successful authentication
-		// @mitigation Repudiation: Comprehensive audit logging for security investigations
-		m.logAuditEvent(ctx, eventID, core.EventAuthSuccess, req.UserIdentifier, m.generateCredentialID(req.UserIdentifier), core.OutcomeSuccess, "", map[string]interface{}{
-			"group":    m.config.Group,
-			"duration": time.Since(startTime).Milliseconds(),
-		})
-
+		eventOutcome = core.OutcomeSuccess
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(&AssertionCompletionResponse{
 			Success: true,
