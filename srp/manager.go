@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"sync"
 	"time"
 
 	"go.fergus.london/nopasswords/core"
@@ -18,8 +16,8 @@ import (
 //
 // The Manager is safe for concurrent use by multiple goroutines.
 type Manager struct {
-	config   *Config
-	group    *Group
+	config *Config
+	group  *Group
 }
 
 // NewManager creates a new SRP Manager with the given configuration options.
@@ -46,317 +44,6 @@ func NewManager(opts ...Option) (*Manager, error) {
 		config: config,
 		group:  group,
 	}, nil
-}
-
-// Register registers a new user with their SRP verifier.
-//
-// The verifier should be computed client-side as:
-//
-//	x = H(salt | H(username | ":" | password))
-//	v = g^x mod N
-//
-// This method stores the verifier and salt for future authentication.
-//
-// Security Considerations:
-// @mitigation Information Disclosure: The verifier cannot be used to recover
-// the password, even if the database is compromised.
-// @risk Repudiation: Registration events are logged for audit purposes.
-func (m *Manager) Register(ctx context.Context, req *RegistrationRequest) (*RegistrationResponse, error) {
-	eventID := generateEventID()
-	startTime := time.Now()
-
-	// Validate request
-	if req.UserIdentifier == "" {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeFailure, "empty_user_id", nil)
-		return &RegistrationResponse{
-			Success: false,
-			Error:   "user ID cannot be empty",
-		}, nil
-	}
-
-	if len(req.Salt) < MinSaltLength {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeFailure, "invalid_salt_length", nil)
-		return &RegistrationResponse{
-			Success: false,
-			Error:   fmt.Sprintf("salt must be at least %d bytes", MinSaltLength),
-		}, nil
-	}
-
-	if len(req.Verifier) == 0 {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeFailure, "empty_verifier", nil)
-		return &RegistrationResponse{
-			Success: false,
-			Error:   "verifier cannot be empty",
-		}, nil
-	}
-
-	// Validate group
-	if req.Group != m.config.Group {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeFailure, "group_mismatch", map[string]interface{}{
-			"requested_group": req.Group,
-			"expected_group":  m.config.Group,
-		})
-		return &RegistrationResponse{
-			Success: false,
-			Error:   fmt.Sprintf("group mismatch: expected %d, got %d", m.config.Group, req.Group),
-		}, nil
-	}
-
-	// Create verifier record
-	verifier := &Verifier{ // TODO: Thse structs are now identical. Embed Verifier within req?
-		UserIdentifier:    req.UserIdentifier,
-		Salt:      req.Salt,
-		Verifier:  req.Verifier,
-		Group:     req.Group,
-	}
-
-	// Serialize verifier
-	data, err := verifier.MarshalBinary()
-	if err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, "", core.OutcomeError, "marshal_error", nil)
-		return nil, fmt.Errorf("failed to marshal verifier: %w", err)
-	}
-
-	// Generate credential ID (hash of userID for SRP)
-	credentialID := m.generateCredentialID(req.UserIdentifier)
-
-	// Store verifier
-	err = m.config.CredentialStore.StoreCredential(ctx, req.UserIdentifier, credentialID, data)
-	if err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, credentialID, core.OutcomeError, "storage_error", nil)
-		return nil, fmt.Errorf("failed to store verifier: %w", err)
-	}
-
-	// Log successful registration
-	m.logAuditEvent(ctx, eventID, core.EventCredentialRegister, req.UserIdentifier, credentialID, core.OutcomeSuccess, "", map[string]interface{}{
-		"group":    req.Group,
-		"duration": time.Since(startTime).Milliseconds(),
-	})
-
-	return &RegistrationResponse{
-		Success: true,
-		UserIdentifier:  req.UserIdentifier,
-	}, nil
-}
-
-// BeginAuthentication initiates the SRP authentication flow.
-//
-// The server:
-// 1. Retrieves the user's verifier (v) from storage
-// 2. Generates ephemeral values: b (private), B (public)
-// 3. Stores session state for the Finish step
-// 4. Returns salt and B to the client
-//
-// Security Considerations:
-// @risk Elevation of Privilege: Ephemeral value b must be cryptographically random.
-// @risk Denial of Service: Sessions must expire to prevent resource exhaustion.
-func (m *Manager) BeginAuthentication(ctx context.Context, req *AuthenticationBeginRequest) (*AuthenticationBeginResponse, error) {
-	eventID := generateEventID()
-	startTime := time.Now()
-
-	// Validate request
-	if req.UserIdentifier == "" {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, "", core.OutcomeFailure, "empty_user_id", nil)
-		return nil, fmt.Errorf("user identifier cannot be empty")
-	}
-
-	// Generate credential ID
-	credentialID := m.generateCredentialID(req.UserIdentifier) // TODO: Generating the ID...? The CredentialStore should have a lookup by identifier
-
-	// Retrieve verifier from storage
-	data, err := m.config.CredentialStore.GetCredential(ctx, req.UserIdentifier, credentialID)
-	if err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeFailure, "user_not_found", nil)
-		// Return generic error to prevent user enumeration
-		return nil, core.ErrInvalidCredential
-	}
-
-	// Deserialize verifier
-	var verifier Verifier
-	if err := verifier.UnmarshalBinary(data); err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeError, "unmarshal_error", nil)
-		return nil, fmt.Errorf("failed to unmarshal verifier: %w", err)
-	}
-
-	// Validate group matches
-	if verifier.Group != m.config.Group {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeFailure, "group_mismatch", map[string]interface{}{
-			"stored_group":   verifier.Group,
-			"expected_group": m.config.Group,
-		})
-		return nil, fmt.Errorf("group mismatch: expected %d, got %d", m.config.Group, verifier.Group)
-	}
-
-	// Generate server ephemeral values
-	// b is a random value (256 bits)
-	// @risk Elevation of Privilege: b must be cryptographically random to prevent
-	// session key prediction.
-	b, err := generateRandomBigInt(256)
-	if err != nil {
-		m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeError, "random_generation_failed", nil)
-		return nil, fmt.Errorf("failed to generate ephemeral value: %w", err)
-	}
-
-	// B = kv + g^b mod N
-	// where k = H(N | g)
-	k := m.group.k()
-	v := new(big.Int).SetBytes(verifier.Verifier)
-
-	// Compute g^b mod N
-	gb := new(big.Int).Exp(m.group.g, b, m.group.N)
-
-	// Compute kv mod N
-	kv := new(big.Int).Mul(k, v)
-	kv.Mod(kv, m.group.N)
-
-	// B = kv + g^b mod N
-	B := new(big.Int).Add(kv, gb)
-	B.Mod(B, m.group.N)
-
-	// Create server session
-	session := &ServerSession{
-		UserIdentifier:    req.UserIdentifier,
-		Group:     m.config.Group,
-		b:         b,
-		B:         B,
-		v:         v,
-	}
-
-	// Store session (indexed by userID)
-	// @mitigation Denial of Service: Sessions expire after configured timeout
-	m.sessions.Store(req.UserIdentifier, session)
-
-	// Log authentication begin
-	m.logAuditEvent(ctx, eventID, core.EventAuthAttempt, req.UserIdentifier, credentialID, core.OutcomeSuccess, "begin", map[string]interface{}{
-		"group":    m.config.Group,
-		"duration": time.Since(startTime).Milliseconds(),
-	})
-
-	return &AuthenticationBeginResponse{
-		Salt:  verifier.Salt,
-		B:     B.Bytes(),
-		Group: m.config.Group,
-	}, nil
-}
-
-// FinishAuthentication completes the SRP authentication flow.
-//
-// The server:
-// 1. Retrieves the session state from Begin
-// 2. Computes the session key S
-// 3. Verifies the client's proof M1
-// 4. Computes server proof M2
-// 5. Returns M2 to the client
-//
-// Both client and server now share the session key S, which can be used
-// for subsequent cryptographic operations.
-//
-// Security Considerations:
-// @risk Tampering: Incorrect protocol implementation allows man-in-the-middle attacks.
-// @risk Information Disclosure: Constant-time comparison prevents timing attacks.
-// @mitigation Elevation of Privilege: Session key is derived correctly per RFC5054.
-func (m *Manager) FinishAuthentication(ctx context.Context, req *AuthenticationFinishRequest) (*AuthenticationFinishResponse, *SessionKey, error) {
-	eventID := generateEventID()
-	startTime := time.Now()
-
-	// Validate request
-	if req.UserIdentifier == "" {
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, "", core.OutcomeFailure, "empty_user_id", nil)
-		return &AuthenticationFinishResponse{
-			Success: false,
-			Error:   "user ID cannot be empty",
-		}, nil, nil
-	}
-
-	if len(req.A) == 0 || len(req.M1) == 0 {
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, "", core.OutcomeFailure, "missing_parameters", nil)
-		return &AuthenticationFinishResponse{
-			Success: false,
-			Error:   "A and M1 are required",
-		}, nil, nil
-	}
-
-	// Retrieve session
-	sessionInterface, ok := m.sessions.Load(req.UserIdentifier)
-	if !ok {
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, "", core.OutcomeFailure, "session_not_found", nil)
-		return &AuthenticationFinishResponse{
-			Success: false,
-			Error:   "session not found or expired",
-		}, nil, nil
-	}
-
-	session := sessionInterface.(*ServerSession)
-
-	// Parse client's public ephemeral value A
-	A := new(big.Int).SetBytes(req.A)
-
-	// Verify A % N != 0 (security check per RFC5054)
-	// @mitigation Tampering: Reject invalid A values that could compromise security
-	Amod := new(big.Int).Mod(A, m.group.N)
-	if Amod.Cmp(big.NewInt(0)) == 0 {
-		m.sessions.Delete(req.UserIdentifier)
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, "", core.OutcomeFailure, "invalid_client_ephemeral", nil)
-		return &AuthenticationFinishResponse{
-			Success: false,
-			Error:   "invalid client ephemeral value",
-		}, nil, nil
-	}
-
-	// Compute u = H(A | B)
-	u := m.computeU(A, session.B)
-
-	// Compute S = (A * v^u)^b mod N
-	// @mitigation Elevation of Privilege: Correct session key derivation per RFC5054
-	vu := new(big.Int).Exp(session.v, u, m.group.N)
-	Avu := new(big.Int).Mul(A, vu)
-	Avu.Mod(Avu, m.group.N)
-	S := new(big.Int).Exp(Avu, session.b, m.group.N)
-
-	// Compute session key K = H(S)
-	K := hashSHA256(S.Bytes())
-
-	// Compute expected M1 = H(H(N) XOR H(g) | H(I) | salt | A | B | K)
-	expectedM1 := m.computeM1(req.UserIdentifier, session.B.Bytes(), req.A, K)
-
-	// Verify M1 using constant-time comparison
-	// @mitigation Information Disclosure: Constant-time comparison prevents timing attacks
-	// that could leak information about the password
-	if subtle.ConstantTimeCompare(req.M1, expectedM1) != 1 {
-		m.sessions.Delete(req.UserIdentifier)
-		m.logAuditEvent(ctx, eventID, core.EventAuthFailure, req.UserIdentifier, m.generateCredentialID(req.UserIdentifier), core.OutcomeFailure, "invalid_proof", map[string]interface{}{
-			"duration": time.Since(startTime).Milliseconds(),
-		})
-		return &AuthenticationFinishResponse{
-			Success: false,
-			Error:   "authentication failed: invalid proof",
-		}, nil, nil
-	}
-
-	// Compute M2 = H(A | M1 | K)
-	M2 := m.computeM2(req.A, req.M1, K)
-
-	// Delete session (one-time use)
-	m.sessions.Delete(req.UserIdentifier)
-
-	// Create session key
-	sessionKey := &SessionKey{
-		Key:       K,
-		UserIdentifier:    req.UserIdentifier,
-		Timestamp: time.Now(),
-	}
-
-	// Log successful authentication
-	// @mitigation Repudiation: Comprehensive audit logging for security investigations
-	m.logAuditEvent(ctx, eventID, core.EventAuthSuccess, req.UserIdentifier, m.generateCredentialID(req.UserIdentifier), core.OutcomeSuccess, "", map[string]interface{}{
-		"group":    m.config.Group,
-		"duration": time.Since(startTime).Milliseconds(),
-	})
-
-	return &AuthenticationFinishResponse{
-		Success: true,
-		M2:      M2,
-	}, sessionKey, nil
 }
 
 // computeU computes u = H(A | B) as defined in SRP-6a.
@@ -393,26 +80,18 @@ func (m *Manager) computeM2(A, M1, K []byte) []byte {
 	return hashSHA256(combined)
 }
 
-// generateCredentialID generates a credential ID from the user ID.
-// For SRP, we use a hash of the userID as the credential ID.
-// TODO: Total nonsense, not required.
-func (m *Manager) generateCredentialID(userID string) string {
-	hash := sha256.Sum256([]byte("srp:" + userID))
-	return hex.EncodeToString(hash[:])
-}
-
-// logAuditEvent logs a security audit event.
+// logAuditEvent logs a security audit event. TODO: Half of these params can be put in a struct, to clean up the handlers.
 func (m *Manager) logAuditEvent(ctx context.Context, eventID, eventType, UserIdentifier, credentialID, outcome, reason string, metadata map[string]interface{}) {
 	event := core.AuditEvent{
-		EventID:      eventID,
-		Timestamp:    time.Now(),
-		EventType:    eventType,
-		Method:       "srp",
-		UserIdentifier:       UserIdentifier,
-		CredentialID: credentialID,
-		Outcome:      outcome,
-		Reason:       reason,
-		Metadata:     metadata,
+		EventID:        eventID,
+		Timestamp:      time.Now(),
+		EventType:      eventType,
+		Method:         "srp",
+		UserIdentifier: UserIdentifier,
+		CredentialID:   credentialID,
+		Outcome:        outcome,
+		Reason:         reason,
+		Metadata:       metadata,
 	}
 
 	// Log errors are intentionally ignored to not disrupt authentication flow

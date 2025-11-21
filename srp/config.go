@@ -23,6 +23,40 @@ const (
 	DefaultSaltLength = 32
 )
 
+// Parameters represents the SRP verifier stored on the server.
+// The verifier is derived from the user's password and salt, but cannot be used
+// to recover the password (one-way function).
+//
+// Security Considerations:
+// @mitigation Information Disclosure: Verifiers do not allow password recovery.
+// Even if the database is compromised, attackers cannot derive the password from the verifier.
+type Parameters struct {
+	// UserID identifies the user this verifier belongs to
+	UserIdentifier string `json:"user_id"`
+
+	// Salt is the random salt used during registration (minimum 128 bits)
+	Salt []byte `json:"salt"`
+
+	// Verifier is the SRP verifier value (v = g^x mod N, where x = H(salt | password))
+	Verifier []byte `json:"verifier"`
+
+	// Group identifies which RFC5054 group was used (3, 4, or 5)
+	Group int `json:"group"`
+}
+
+// ParameterStore... TODO
+type ParameterStore interface {
+	GetForUserIdentifier(string) (*Parameters, error)
+	StoreForUserIdentifier(string, *Parameters) error
+}
+
+// StateCache... TODO
+type StateCache interface {
+	GetForUserIdentifier(string) (*AssertionState, error)
+	StoreForUserIdentifier(string, *AssertionState) error
+	PurgeForUserIdentity(string) error
+}
+
 // Config holds the configuration for SRP operations.
 //
 // Configuration must be identical between client and server to ensure
@@ -45,6 +79,12 @@ type Config struct {
 	// AuditLogger receives security audit events.
 	// Optional: Defaults to no-op logger if not provided.
 	AuditLogger core.AuditLogger
+
+	// TODO...
+	Store ParameterStore
+
+	// TODO...
+	Cache StateCache
 }
 
 // Option is a functional option for configuring the SRP Manager.
@@ -89,15 +129,34 @@ func WithSaltLength(length int) Option {
 	}
 }
 
-// WithAuditLogger sets the audit logger for security events.
-//
-// Optional: Defaults to no-op logger if not provided.
-//
-// Example:
-//
-//	logger := memory.NewStdoutLogger()
-//	manager := NewManager(WithAuditLogger(logger))
-func WithAuditLogger(logger core.AuditLogger) Option {
+// WithParameterStore sets the Parameter Store for retrieving user-specific
+// Parameters.
+func WithParameterStore(store ParameterStore) Option {
+	return func(c *Config) error {
+		if store == nil {
+			return fmt.Errorf("parameter store cannot be nil")
+		}
+
+		c.Store = store
+		return nil
+	}
+}
+
+// WithStateCache sets the StateCache for storing state during the assertion
+// flow.
+func WithStateCache(cache StateCache) Option {
+	return func(c *Config) error {
+		if cache == nil {
+			return fmt.Errorf("state cache cannot be nil")
+		}
+
+		c.Cache = cache
+		return nil
+	}
+}
+
+// WithEventLogger sets the event logger for security and debug.
+func WithEventLogger(logger core.AuditLogger) Option {
 	return func(c *Config) error {
 		if logger == nil {
 			return fmt.Errorf("audit logger cannot be nil")
@@ -114,9 +173,9 @@ func WithAuditLogger(logger core.AuditLogger) Option {
 func NewConfig(opts ...Option) (*Config, error) {
 	// Default configuration
 	config := &Config{
-		Group:          DefaultGroup,
-		SaltLength:     DefaultSaltLength,
-		AuditLogger:    memory.NewNopLogger(),
+		Group:       DefaultGroup,
+		SaltLength:  DefaultSaltLength,
+		AuditLogger: memory.NewNopLogger(),
 	}
 
 	// Apply options
@@ -153,6 +212,8 @@ func (c *Config) Validate() error {
 	if c.AuditLogger == nil {
 		c.AuditLogger = memory.NewNopLogger()
 	}
+
+	// TODO: We need to verify the presence of Cache and Store too.
 
 	return nil
 }
