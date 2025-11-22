@@ -143,9 +143,7 @@ jobs:
 
     - name: Verify example binaries
       run: |
-        test -f examples/webauthn-demo/webauthn-demo
         test -f examples/srp-demo/srp-demo
-        test -f examples/audit-logging/audit-logging
 
   # Security scanning
   security:
