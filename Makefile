@@ -1,5 +1,5 @@
 .PHONY: help test test-verbose test-coverage test-race lint fmt vet tidy clean deps check build \
-        client-install client client-build client-lint client-clean \
+        client-install client client-build client-test client-lint client-clean \
         examples dev all ci
 
 # Default target
@@ -22,7 +22,7 @@ COVERAGE_HTML=$(COVERAGE_DIR)/coverage.html
 
 # Example directories
 BUILT_CLIENT=client/dist/nopasswords.js
-EXAMPLE_DIRS=examples/webauthn-demo examples/srp-demo examples/audit-logging
+EXAMPLES=srp-demo
 
 ## help: Display this help message
 help:
@@ -103,18 +103,24 @@ client-install:
 	@echo "Installing client dependencies..."
 	cd client && npm install && cd ..
 
-## client-build: Build all client library
+## client-build: Build client library
 client-build:
 	@echo "Building client library..."
 	cd client && npm run build && cd ..
 
+## client: Build client library and populate example directories
 client: client-clean client-install client-build
-	cp ${BUILT_CLIENT}.map examples/webauthn-demo/static/nopasswords.min.js.map
-	cp ${BUILT_CLIENT} examples/webauthn-demo/static/nopasswords.min.js
-	cp ${BUILT_CLIENT}.map examples/srp-demo/static/nopasswords.min.js.map
-	cp ${BUILT_CLIENT} examples/srp-demo/static/nopasswords.min.js
+	@for ex in $(EXAMPLES); do \
+		cp ${BUILT_CLIENT}.map cmd/examples/$$ex/static/nopasswords.min.js.map; \
+		cp ${BUILT_CLIENT} cmd/examples/$$ex/static/nopasswords.min.js; \
+	done
 
-## client-lint: Lint all client code
+## client-test: Run client tests
+client-test:
+	@echo "Running client tests..."
+	cd client && npm test && cd ..
+
+## client-lint: Lint client code
 client-lint:
 	@echo "Linting client code..."
 	if [ -f "client/package.json" ] && grep -q "\"lint\"" "client/package.json"; then \
@@ -132,9 +138,9 @@ client-clean:
 ## examples: Build all examples
 examples: client
 	@echo "Building examples..."
-	@for dir in $(EXAMPLE_DIRS); do \
-		echo "Building $$dir..."; \
-		cd $$dir && $(GOBUILD) -o $$(basename $$dir) . && cd ../..; \
+	@for ex in $(EXAMPLES); do \
+		echo "Building $$ex..."; \
+		cd cmd/examples/$$ex && $(GOBUILD) -o $$(basename cmd/examples/$$ex) . && cd ../../..; \
 	done
 
 ## dev: Start development environment (install deps, build clients)

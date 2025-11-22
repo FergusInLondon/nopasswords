@@ -33,23 +33,6 @@ services:
       - CI=true
     command: make ci
 
-  # Example: WebAuthn demo server
-  # @risk Information Disclosure: Examples are for development only, not production
-  # @mitigation: Documentation clearly states examples are not production-ready
-  webauthn-demo:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - .:/workspace
-    working_dir: /workspace/examples/webauthn-demo
-    ports:
-      - "8080:8080"
-    command: /bin/bash -c "go build -buildvcs=false -o webauthn-demo . && ./webauthn-demo"
-    environment:
-      - WEBAUTHN_RP_ID=localhost
-      - WEBAUTHN_RP_ORIGINS=http://localhost:8080
-
   # Example: SRP demo server
   srp-demo:
     build:
@@ -57,7 +40,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/workspace
-    working_dir: /workspace/examples/srp-demo
+    working_dir: /workspace/cmd/examples/srp-demo
     ports:
       - "8081:8081"
     command: /bin/bash -c "go build -buildvcs=false -o srp-demo . && ./srp-demo"

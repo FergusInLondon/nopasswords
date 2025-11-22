@@ -40,11 +40,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY client/package.json client/package-lock.json* ./client/
-COPY client-srp/package.json client-srp/package-lock.json* ./client-srp/
 
 # Install dependencies
-RUN cd client && npm install && cd .. \
-    && cd client-srp && npm install && cd ..
+RUN cd client && npm install && cd ..
 
 # Copy source code
 COPY . .

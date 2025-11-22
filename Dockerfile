@@ -32,11 +32,9 @@ RUN go mod download
 
 # Copy client package files for dependency installation
 COPY client/package.json client/package-lock.json* ./client/
-COPY client-srp/package.json client-srp/package-lock.json* ./client-srp/
 
 # Install client dependencies
-RUN cd client && npm install && cd .. \
-    && cd client-srp && npm install && cd ..
+RUN cd client && npm install && cd .. 
 
 # Copy the rest of the source code
 COPY . .

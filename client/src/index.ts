@@ -6,20 +6,6 @@
  * @packageDocumentation
  */
 
-// WebAuthN Exports
-
-export { WebAuthnClient } from './webauthn/client';
-export {
-  WebAuthnConfig,
-  BeginRegistrationOptions as WebAuthnBeginRegistrationOptions,
-  BeginAuthenticationOptions as WebAuthnBeginAuthenticationOptions,
-  RegistrationResult as WebAuthnRegistrationResult,
-  AuthenticationResult as WebAuthnAuthenticationResult,
-  BrowserCapabilities as WebAuthnBrowserCapabilities,
-  WebAuthnError,
-  WebAuthnErrorType,
-} from './webauthn/types';
-
 // Secure Remote Password (SRP) Exports
 
 export { SRPClient } from './srp/client';

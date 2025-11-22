@@ -7,6 +7,12 @@
   "scripts": {
     "build": "tsc && node build.js",
     "watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
+    "test:cross-impl": "vitest run test/cross-impl",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' --fix",
     "format": "prettier --write 'src/**/*.ts'",
@@ -24,12 +30,16 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/jsdom": "^27.0.0",
     "@types/node": "^22.10.2",
     "@typescript-eslint/eslint-plugin": "^8.18.2",
     "@typescript-eslint/parser": "^8.18.2",
+    "@vitest/ui": "^4.0.13",
     "esbuild": "^0.27.0",
     "eslint": "^9.18.0",
+    "jsdom": "^27.2.0",
     "prettier": "^3.4.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.13"
   }
 }
