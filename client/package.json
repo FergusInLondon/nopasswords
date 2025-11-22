@@ -1,5 +1,5 @@
 {
-  "name": "@nopasswords/client",
+  "name": "nopasswords-client",
   "version": "0.1.0",
   "description": "Client library for NoPasswords",
   "main": "dist/nopasswords.js",
