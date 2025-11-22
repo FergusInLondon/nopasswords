@@ -1,3 +1,33 @@
+// Package errors provides error types and utilities for the NoPasswords library.
+//
+// This package defines common error values and the AuthError type, which wraps
+// errors with additional security context suitable for logging and debugging while
+// maintaining appropriate information boundaries for user-facing messages.
+//
+// Key features:
+//   - Predefined sentinel errors for common scenarios (ErrNotFound, ErrExpired, etc.)
+//   - AuthError type with rich context (user ID, credential ID, error codes)
+//   - Support for internal vs. external error messages
+//   - Compatible with Go 1.13+ error wrapping (errors.Is, errors.As)
+//
+// Security Considerations:
+//   - Error messages are designed to avoid leaking sensitive information
+//   - Internal errors can be marked to prevent exposure to end users
+//   - Use UserMessage() method for user-facing error text
+//
+// Example:
+//
+//	err := errors.NewAuthError(
+//	    errors.CodeAuthFailed,
+//	    "Authentication failed",
+//	    errors.ErrInvalidSignature,
+//	).WithUserID("user123").WithMethod("webauthn")
+//
+//	// For logging (includes all context)
+//	log.Error(err.Error())
+//
+//	// For user display (safe message only)
+//	http.Error(w, err.UserMessage(), http.StatusUnauthorized)
 package errors
 
 import (

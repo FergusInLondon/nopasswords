@@ -1,4 +1,32 @@
-// Package events ... TODO
+// Package events provides structured event logging for authentication operations.
+//
+// This package defines types and interfaces for recording security-relevant events
+// such as authentication attempts, successes, and failures. Events are designed to
+// exclude sensitive information while providing sufficient context for security
+// monitoring, debugging, and compliance.
+//
+// Key Components:
+//   - Event: Structured event type with timestamp, user, protocol, and metadata
+//   - EventLogger: Interface for event logging implementations
+//   - EventBuilder: Fluent builder for constructing events
+//   - Type and Protocol enums for categorizing events
+//
+// Security Considerations:
+//   - Events MUST NOT contain passwords, private keys, or sensitive credentials
+//   - Implement comprehensive logging for security monitoring and incident response
+//   - Consider rate limiting to prevent log flooding attacks
+//   - Use structured logging (JSON) for easy parsing and analysis
+//
+// Example:
+//
+//	event := events.NewEventBuilder().
+//	    WithEventType(events.EventAssertionSuccess).
+//	    WithProtocol(events.ProtocolSecureRemotePassword).
+//	    WithUserIdentifier("user@example.com").
+//	    WithMetadata("group", 3).
+//	    Build()
+//
+//	logger.Log(ctx, event)
 package events
 
 import (
@@ -50,7 +78,13 @@ type Event struct {
 
 // Event Types
 
-// Type ... TODO
+// Type represents the category of authentication event.
+//
+// Event types follow a hierarchical naming scheme:
+//   - <operation>.<outcome>
+//   - Examples: "attestation.success", "assertion.failure"
+//
+// Use String() method to get the canonical string representation.
 type Type int
 
 const (
@@ -77,14 +111,23 @@ var eventStrings = map[Type]string{
 	EventAssertionFailure:   "assertion.failure",
 }
 
-// String ... TODO
+// String returns the canonical string representation of the event type.
+//
+// Example:
+//   - EventAttestationAttempt -> "attestation.attempt"
+//   - EventAssertionSuccess -> "assertion.success"
 func (evtType Type) String() string {
 	return eventStrings[evtType]
 }
 
 // Protocols
 
-// Protocol ... TODO
+// Protocol represents the authentication protocol used for an event.
+//
+// This identifies which authentication method (SRP, WebAuthn, etc.) generated
+// the event, allowing for protocol-specific monitoring and analytics.
+//
+// Use String() method to get the canonical string representation.
 type Protocol int
 
 const (
@@ -99,7 +142,11 @@ var protocolStrings = map[Protocol]string{
 	ProtocolWebAuthn:             "webauthn",
 }
 
-// String ... TODO
+// String returns the canonical string representation of the protocol.
+//
+// Example:
+//   - ProtocolSecureRemotePassword -> "srp"
+//   - ProtocolWebAuthn -> "webauthn"
 func (protocol Protocol) String() string {
 	return protocolStrings[protocol]
 }
@@ -204,7 +251,7 @@ func (b *EventBuilder) WithProtocol(protocol Protocol) *EventBuilder {
 	return b
 }
 
-// WithUserID sets the user identifier.
+// WithUserIdentifier sets the user identifier.
 func (b *EventBuilder) WithUserIdentifier(userIdentifier string) *EventBuilder {
 	b.event.UserIdentifier = userIdentifier
 	return b

@@ -1,4 +1,37 @@
-// Package srp ... TODO
+// Package srp implements Secure Remote Password (SRP) protocol as defined in RFC 5054.
+//
+// SRP is a password-authenticated key exchange (PAKE) protocol that allows a client to
+// authenticate to a server using a password without ever transmitting the password over
+// the network. The server stores only a verifier derived from the password, which cannot
+// be used to impersonate the client or recover the password.
+//
+// Security Properties:
+//   - Password never transmitted over the network
+//   - Server stores only verifiers, not passwords
+//   - Mutual authentication (both parties prove knowledge of the password)
+//   - Protection against man-in-the-middle attacks
+//   - Resistance to offline dictionary attacks (even with compromised verifier database)
+//
+// Protocol Flow:
+//  1. Attestation (Registration): Client sends verifier and salt to server
+//  2. Assertion Initiation: Client requests authentication, server sends challenge
+//  3. Assertion Completion: Client computes proof, server verifies and responds
+//
+// Example usage:
+//
+//	manager, err := srp.NewManager(
+//	    srp.WithGroup(3),
+//	    srp.WithParameterStore(myStore),
+//	    srp.WithStateCache(myCache),
+//	    srp.WithEventLogger(myLogger),
+//	)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	http.HandleFunc("/register", manager.AttestationHandlerFunc(onSuccess))
+//	http.HandleFunc("/auth/begin", manager.AssertionBeginHandler())
+//	http.HandleFunc("/auth/finish", manager.AssertionVerificationHandler(onAuth))
 package srp
 
 import (
@@ -45,13 +78,45 @@ type Parameters struct {
 	Group int `json:"group"`
 }
 
-// ParameterStore ... TODO
+// ParameterStore defines the interface for persisting and retrieving SRP parameters.
+//
+// Parameters include the user's salt and verifier, which are required for authentication.
+// The verifier is a one-way hash of the password and cannot be used to recover the
+// original password, even if the database is compromised.
+//
+// Implementations must be safe for concurrent use by multiple goroutines.
+//
+// Security Considerations:
+//   - Store verifiers securely; while they don't reveal passwords, they enable authentication
+//   - Implement rate limiting to prevent brute-force attacks
+//   - Consider encrypting the database at rest
+//   - Audit all access to parameter stores
+//
+// Example implementations:
+//   - memory.ParameterStore (in-memory, for testing)
+//   - Custom database-backed stores (PostgreSQL, MongoDB, etc.)
 type ParameterStore interface {
 	GetForUserIdentifier(string) (*Parameters, error)
 	StoreForUserIdentifier(string, *Parameters) error
 }
 
-// StateCache ... TODO
+// StateCache defines the interface for temporarily storing SRP authentication state.
+//
+// During the assertion (authentication) flow, ephemeral values (B, b) must be stored
+// between the initiation and completion requests. These values should be purged after
+// successful authentication or after a timeout.
+//
+// Implementations must be safe for concurrent use by multiple goroutines.
+//
+// Security Considerations:
+//   - State should expire after a short timeout (default: 5 minutes)
+//   - Purge state immediately after successful authentication
+//   - Store state securely to prevent session hijacking
+//   - Consider using a distributed cache for multi-server deployments (Redis, Memcached)
+//
+// Example implementations:
+//   - memory.StateCache (in-memory, single server only)
+//   - Redis-backed cache (for distributed deployments)
 type StateCache interface {
 	GetForUserIdentifier(string) (*AssertionState, error)
 	StoreForUserIdentifier(string, *AssertionState) error

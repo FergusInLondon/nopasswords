@@ -36,7 +36,7 @@ type AttestationResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
-// AttestationSuccessFunc is a callback function for use after a successful
+// AttestationSucccessFunc is a callback function for use after a successful
 // attestation event: i.e. the user has successfully provided proof of a new
 // password.
 //

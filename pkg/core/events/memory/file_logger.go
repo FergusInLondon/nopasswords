@@ -1,4 +1,16 @@
-// Package srp ... TODO
+// Package memory provides in-memory and file-based event logger implementations.
+//
+// This package includes simple event logger implementations suitable for development,
+// testing, and single-server deployments:
+//
+//   - FileLogger: Writes events to a JSON Lines file
+//   - StdoutLogger: Writes events to stdout (for development/debugging)
+//   - NopLogger: No-op logger that discards events (for testing)
+//
+// For production deployments, consider integrating with enterprise logging systems
+// (Elasticsearch, Splunk, CloudWatch, etc.) by implementing the EventLogger interface.
+//
+// All implementations are thread-safe.
 package memory
 
 import (
