@@ -11,6 +11,8 @@ NoPasswords addresses threats from the STRIDE model:
 - **Denial of Service**: Rate limiting guidance, session timeouts
 - **Elevation of Privilege**: Challenge validation, session key protection
 
+Identified threats are labelled within the codebase via the use of `@risk` and `@mitigation` comments.
+
 ## Security Best Practices
 
 ### Implementation Guidelines
@@ -24,7 +26,6 @@ NoPasswords addresses threats from the STRIDE model:
    - Implement the `EventLogger` interface to capture security events
    - Store audit logs securely and protect against tampering
    - Monitor logs for suspicious authentication patterns
-   - See the [audit-logging example](examples/audit-logging/) for integration patterns
 
 3. **Network Security**
    - Always use HTTPS/TLS in production
@@ -45,38 +46,13 @@ NoPasswords addresses threats from the STRIDE model:
 
 ## Reporting Security Issues
 
-**Please report security vulnerabilities to [security@fergus.london](mailto:security@fergus.london).**
+**Please report security vulnerabilities to @FergusInLondon.**
 
 **Do not** open public GitHub issues for security vulnerabilities.
 
-We take security seriously and will respond to valid reports as quickly as possible. Please include:
+When communicating a potential vulnerability, please include the following details:
 
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
 - Suggested remediation (if any)
-
-## Security Considerations for Examples
-
-⚠️ **The example applications in this repository are for demonstration purposes only.**
-
-Before using any example code in production:
-
-1. Implement proper session management
-2. Add rate limiting to authentication endpoints
-3. Use production-grade storage implementations (not in-memory stores)
-4. Configure appropriate CORS policies
-5. Enable comprehensive audit logging
-6. Review and test all security controls
-7. Consider security testing and penetration testing
-
-## Responsible Disclosure
-
-We follow responsible disclosure practices. If you report a vulnerability:
-
-1. We will acknowledge receipt within 48 hours
-2. We will provide an estimated timeline for a fix
-3. We will notify you when the fix is released
-4. We will credit you in the security advisory (unless you prefer to remain anonymous)
-
-Thank you for helping keep NoPasswords secure.

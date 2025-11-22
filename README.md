@@ -15,11 +15,11 @@ This isn't an authentication/authorization framework—it's a **proof of presenc
 
 ## Features
 
-- **🔐 SRP Protocol (RFC5054)**: Zero-knowledge password proof supporting 2048, 3072, and 4096-bit groups
-- **🏗️ Opinionless Design**: Dependency injection for storage and logging—bring your own database and logging infrastructure
-- **📊 Observable**: Built-in event logging interface with structured events for debugging and security monitoring
-- **✅ Well-Tested**: Complete test coverage of authentication flows with race detection
-- **📦 TypeScript Client**: Browser-ready SRP client library included
+- **🔐 SRP Protocol (RFC5054)**: Zero-knowledge password proof supporting 2048, 3072, and 4096-bit groups.
+- **🏗️ Opinionless Design**: Dependency injection for storage and logging—bring your own database and logging infrastructure.
+- **📊 Observable**: Built-in event logging interface with structured events for debugging and security monitoring.
+- **✅ Well-Tested**: Complete test coverage of authentication flows, with granular unit test coverage of critical/sensitive functions.
+- **📦 TypeScript Client**: Browser-ready SRP client library included.
 
 ## Terminology
 
@@ -150,8 +150,7 @@ Tests cover protocol correctness, concurrent usage, error conditions, and cross-
 ## Documentation
 
 - 📖 **[API Documentation](https://pkg.go.dev/go.fergus.london/nopasswords)**: Complete Go API reference
-- 📁 **[docs/](docs/)**: Additional documentation including project overview, roadmap, and contributing guidelines
-- 🔒 **[SECURITY.md](SECURITY.md)**: Security considerations, threat model, and vulnerability reporting
+- 📁 **[docs/](docs/)**: Additional documentation including security guidance and roadmap ideas.
 - 💡 **[cmd/examples/srp-demo](cmd/examples/srp-demo)**: Complete working example
 
 ## What This Library Does NOT Do
@@ -164,7 +163,7 @@ NoPasswords is intentionally focused. It does **not** handle:
 - Account recovery flows
 - Email/SMS delivery for magic links
 
-These are your application's responsibility. NoPasswords handles the cryptographic proof; you handle the business logic.
+These are your application's responsibility. _NoPasswords handles the cryptographic proof; you handle the business logic._
 
 ## Security
 
@@ -173,11 +172,9 @@ See [SECURITY.md](SECURITY.md) for:
 - Security best practices
 - Vulnerability reporting
 
-⚠️ **Important**: The example applications are for demonstration only. Implement proper session management, rate limiting, and security controls before production use.
-
 ## Contributing
 
-Contributions welcome! See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+Contributions welcome - simply submit a Pull Request. I do ask that tests are included for any sensitive/critical operations, but there are no requirements for adhering to specific test coverage metrics.
 
 ## License
 
@@ -185,9 +182,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Roadmap
 
+- 🚧 `RedisParameterStore` and `RedisStateCache` implementations (in progress)
 - 🚧 WebAuthn/FIDO2 support (in progress)
-- Token-based magic link authentication
-- Additional SRP group support
-- Enhanced audit logging options
+- MFA - TOTP and WebAuthn 
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed plans.
