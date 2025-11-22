@@ -50,11 +50,22 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v6
       with:
-        node-version: '20'
-        registry-url: 'https://registry.npmjs.org'
+        node-version: '22'
+        cache: 'npm'
+        cache-dependency-path: |
+          client/package-lock.json
 
     - name: Install dependencies
-      run: npm ci
+      run: make client-install
+
+    - name: Lint client code
+      run: make client-lint
+
+    - name: Build client libraries
+      run: make client-build
+
+    - name: Run client tests
+      run: make client-test
 
     - name: Publish to npm
       run: npm publish --provenance
