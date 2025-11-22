@@ -1,9 +1,9 @@
 
 # Example static files (compiled)
-examples/*/static/*.js
-examples/*/static/*.map
+cmd/examples/*/static/*.js
+cmd/examples/*/static/*.map
 
 # Go binaries in examples
-examples/*/audit-logging
-examples/*/webauthn-demo
-examples/*/srp-demo
+cmd/examples/*/audit-logging
+cmd/examples/*/webauthn-demo
+cmd/examples/*/srp-demo

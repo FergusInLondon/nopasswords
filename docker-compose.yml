@@ -42,7 +42,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/workspace
-    working_dir: /workspace/examples/webauthn-demo
+    working_dir: /workspace/cmd/examples/webauthn-demo
     ports:
       - "8080:8080"
     command: /bin/bash -c "go build -buildvcs=false -o webauthn-demo . && ./webauthn-demo"
@@ -57,7 +57,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/workspace
-    working_dir: /workspace/examples/srp-demo
+    working_dir: /workspace/cmd/examples/srp-demo
     ports:
       - "8081:8081"
     command: /bin/bash -c "go build -buildvcs=false -o srp-demo . && ./srp-demo"

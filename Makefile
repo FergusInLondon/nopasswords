@@ -22,7 +22,7 @@ COVERAGE_HTML=$(COVERAGE_DIR)/coverage.html
 
 # Example directories
 BUILT_CLIENT=client/dist/nopasswords.js
-EXAMPLE_DIRS=examples/webauthn-demo examples/srp-demo examples/audit-logging
+EXAMPLE_DIRS=webauthn-demo srp-demo audit-logging
 
 ## help: Display this help message
 help:
@@ -109,10 +109,10 @@ client-build:
 	cd client && npm run build && cd ..
 
 client: client-clean client-install client-build
-	cp ${BUILT_CLIENT}.map examples/webauthn-demo/static/nopasswords.min.js.map
-	cp ${BUILT_CLIENT} examples/webauthn-demo/static/nopasswords.min.js
-	cp ${BUILT_CLIENT}.map examples/srp-demo/static/nopasswords.min.js.map
-	cp ${BUILT_CLIENT} examples/srp-demo/static/nopasswords.min.js
+	cp ${BUILT_CLIENT}.map cmd/examples/webauthn-demo/static/nopasswords.min.js.map
+	cp ${BUILT_CLIENT} cmd/examples/webauthn-demo/static/nopasswords.min.js
+	cp ${BUILT_CLIENT}.map cmd/examples/srp-demo/static/nopasswords.min.js.map
+	cp ${BUILT_CLIENT} cmd/examples/srp-demo/static/nopasswords.min.js
 
 ## client-lint: Lint all client code
 client-lint:
@@ -132,9 +132,9 @@ client-clean:
 ## examples: Build all examples
 examples: client
 	@echo "Building examples..."
-	@for dir in $(EXAMPLE_DIRS); do \
+	@for dir in $(EXAMPLES); do \
 		echo "Building $$dir..."; \
-		cd $$dir && $(GOBUILD) -o $$(basename $$dir) . && cd ../..; \
+		cd cmd/examples/$$dir && $(GOBUILD) -o $$(basename cmd/examples/$$dir) . && cd ../../..; \
 	done
 
 ## dev: Start development environment (install deps, build clients)

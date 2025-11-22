@@ -16,9 +16,9 @@ client-srp/dist
 coverage
 *.out
 *.test
-examples/*/webauthn-demo
-examples/*/srp-demo
-examples/*/audit-logging
+cmd/examples/*/webauthn-demo
+cmd/examples/*/srp-demo
+cmd/examples/*/audit-logging
 
 # IDE
 .vscode
