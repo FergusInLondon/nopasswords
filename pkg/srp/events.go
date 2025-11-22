@@ -9,14 +9,14 @@ import (
 type buildableEventStream struct {
 	ctx    context.Context
 	logger events.EventLogger
-	entry  events.AuditEvent
+	entry  events.Event
 }
 
 func newBuildableEvent(ctx context.Context, logger events.EventLogger, eventID string) *buildableEventStream {
 	return &buildableEventStream{
 		ctx:    ctx,
 		logger: logger,
-		entry: events.AuditEvent{
+		entry: events.Event{
 			EventID: eventID,
 		},
 	}
@@ -26,9 +26,8 @@ func (bes *buildableEventStream) withUserIdentifier(userIdentifier string) {
 	bes.entry.UserIdentifier = userIdentifier
 }
 
-func (bes *buildableEventStream) log(eventType, outcome, reason string, metadata map[string]interface{}) {
+func (bes *buildableEventStream) log(eventType events.Type, reason string, metadata map[string]interface{}) {
 	event := bes.entry
-	event.Outcome = outcome
 	event.Reason = reason
 	event.Metadata = metadata
 

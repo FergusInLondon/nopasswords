@@ -19,12 +19,11 @@ func TestNopLogger_Log(t *testing.T) {
 	logger := NewNopLogger()
 	ctx := context.Background()
 
-	event := events.AuditEvent{
+	event := events.Event{
 		EventID:        "event123",
 		Timestamp:      time.Now(),
-		EventType:      events.EventAuthSuccess,
+		Type:           events.EventAssertionSuccess,
 		UserIdentifier: "user456",
-		Outcome:        events.OutcomeSuccess,
 	}
 
 	// Should not error and should do nothing
@@ -41,13 +40,12 @@ func TestStdoutLogger_Log(t *testing.T) {
 	logger := NewStdoutLogger(false)
 	ctx := context.Background()
 
-	event := events.AuditEvent{
+	event := events.Event{
 		EventID:        "event123",
 		Timestamp:      time.Now(),
-		EventType:      events.EventAuthSuccess,
-		Method:         "webauthn",
+		Type:           events.EventAssertionSuccess,
+		Protocol:       events.ProtocolWebAuthn,
 		UserIdentifier: "user456",
-		Outcome:        events.OutcomeSuccess,
 		Reason:         "valid_credential",
 	}
 
@@ -61,15 +59,14 @@ func TestStdoutLogger_Log(t *testing.T) {
 	_, _ = io.Copy(&buf, r)
 
 	// Parse JSON output
-	var logged events.AuditEvent
+	var logged events.Event
 	err = json.Unmarshal(buf.Bytes(), &logged)
 	require.NoError(t, err)
 
 	assert.Equal(t, event.EventID, logged.EventID)
-	assert.Equal(t, event.EventType, logged.EventType)
-	assert.Equal(t, event.Method, logged.Method)
+	assert.Equal(t, event.Type, logged.Type)
+	assert.Equal(t, event.Protocol, logged.Protocol)
 	assert.Equal(t, event.UserIdentifier, logged.UserIdentifier)
-	assert.Equal(t, event.Outcome, logged.Outcome)
 	assert.Equal(t, event.Reason, logged.Reason)
 }
 
@@ -82,12 +79,11 @@ func TestStdoutLogger_Log_Pretty(t *testing.T) {
 	logger := NewStdoutLogger(true)
 	ctx := context.Background()
 
-	event := events.AuditEvent{
+	event := events.Event{
 		EventID:        "event123",
 		Timestamp:      time.Now(),
-		EventType:      events.EventAuthSuccess,
+		Type:           events.EventAssertionSuccess,
 		UserIdentifier: "user456",
-		Outcome:        events.OutcomeSuccess,
 	}
 
 	err := logger.Log(ctx, event)
@@ -124,11 +120,10 @@ func TestStdoutLogger_ConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			for j := 0; j < 10; j++ {
-				event := events.AuditEvent{
+				event := events.Event{
 					EventID:   string(rune('A' + id)),
 					Timestamp: time.Now(),
-					EventType: events.EventAuthSuccess,
-					Outcome:   events.OutcomeSuccess,
+					Type:      events.EventAssertionSuccess,
 				}
 				_ = logger.Log(ctx, event)
 			}
@@ -156,12 +151,11 @@ func TestStderrLogger_Log(t *testing.T) {
 	logger := NewStderrLogger(false)
 	ctx := context.Background()
 
-	event := events.AuditEvent{
+	event := events.Event{
 		EventID:        "event123",
 		Timestamp:      time.Now(),
-		EventType:      events.EventAuthFailure,
+		Type:           events.EventAssertionFailure,
 		UserIdentifier: "user456",
-		Outcome:        events.OutcomeFailure,
 		Reason:         "invalid_credential",
 	}
 
@@ -175,14 +169,13 @@ func TestStderrLogger_Log(t *testing.T) {
 	_, _ = io.Copy(&buf, r)
 
 	// Parse JSON output
-	var logged events.AuditEvent
+	var logged events.Event
 	err = json.Unmarshal(buf.Bytes(), &logged)
 	require.NoError(t, err)
 
 	assert.Equal(t, event.EventID, logged.EventID)
-	assert.Equal(t, event.EventType, logged.EventType)
+	assert.Equal(t, event.Type, logged.Type)
 	assert.Equal(t, event.UserIdentifier, logged.UserIdentifier)
-	assert.Equal(t, event.Outcome, logged.Outcome)
 }
 
 func TestBufferedLogger_Log(t *testing.T) {
@@ -191,8 +184,8 @@ func TestBufferedLogger_Log(t *testing.T) {
 	logger := NewBufferedLogger(underlying, 3)
 	ctx := context.Background()
 
-	event1 := events.AuditEvent{EventID: "event1", Timestamp: time.Now()}
-	event2 := events.AuditEvent{EventID: "event2", Timestamp: time.Now()}
+	event1 := events.Event{EventID: "event1", Timestamp: time.Now()}
+	event2 := events.Event{EventID: "event2", Timestamp: time.Now()}
 
 	// Log events (should buffer)
 	err := logger.Log(ctx, event1)
@@ -215,9 +208,9 @@ func TestBufferedLogger_AutoFlush(t *testing.T) {
 	logger := NewBufferedLogger(underlying, 2) // Auto-flush at 2 events
 	ctx := context.Background()
 
-	event1 := events.AuditEvent{EventID: "event1", Timestamp: time.Now(), EventType: "test"}
-	event2 := events.AuditEvent{EventID: "event2", Timestamp: time.Now(), EventType: "test"}
-	event3 := events.AuditEvent{EventID: "event3", Timestamp: time.Now(), EventType: "test"}
+	event1 := events.Event{EventID: "event1", Timestamp: time.Now(), Type: events.EventAssertionAttempt}
+	event2 := events.Event{EventID: "event2", Timestamp: time.Now(), Type: events.EventAssertionSuccess}
+	event3 := events.Event{EventID: "event3", Timestamp: time.Now(), Type: events.EventAssertionFailure}
 
 	// Log 2 events - should auto-flush
 	_ = logger.Log(ctx, event1)
@@ -252,7 +245,7 @@ func TestBufferedLogger_Close(t *testing.T) {
 	logger := NewBufferedLogger(underlying, 10) // Large buffer
 	ctx := context.Background()
 
-	event := events.AuditEvent{EventID: "event1", Timestamp: time.Now(), EventType: "test"}
+	event := events.Event{EventID: "event1", Timestamp: time.Now(), Type: events.EventAssertionAttempt}
 
 	// Log without triggering auto-flush
 	_ = logger.Log(ctx, event)
@@ -295,10 +288,10 @@ func TestBufferedLogger_ConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			for j := 0; j < 10; j++ {
-				event := events.AuditEvent{
+				event := events.Event{
 					EventID:   string(rune('A' + id)),
 					Timestamp: time.Now(),
-					EventType: events.EventAuthSuccess,
+					Type:      events.EventAssertionSuccess,
 				}
 				_ = logger.Log(ctx, event)
 			}

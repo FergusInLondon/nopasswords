@@ -53,13 +53,12 @@ func TestFileLogger_Log(t *testing.T) {
 	defer logger.Close()
 
 	ctx := context.Background()
-	event := events.AuditEvent{
+	event := events.Event{
 		EventID:        "event123",
 		Timestamp:      time.Now(),
-		EventType:      events.EventAuthSuccess,
-		Method:         "webauthn",
+		Type:           events.EventAssertionAttempt,
+		Protocol:       events.ProtocolWebAuthn,
 		UserIdentifier: "user456",
-		Outcome:        events.OutcomeSuccess,
 		Metadata:       map[string]interface{}{"test": "value"},
 	}
 
@@ -74,15 +73,14 @@ func TestFileLogger_Log(t *testing.T) {
 	data, err := os.ReadFile(logPath)
 	require.NoError(t, err)
 
-	var logged events.AuditEvent
+	var logged events.Event
 	err = json.Unmarshal(data, &logged)
 	require.NoError(t, err)
 
 	assert.Equal(t, event.EventID, logged.EventID)
-	assert.Equal(t, event.EventType, logged.EventType)
-	assert.Equal(t, event.Method, logged.Method)
+	assert.Equal(t, event.Type, logged.Type)
+	assert.Equal(t, event.Protocol, logged.Protocol)
 	assert.Equal(t, event.UserIdentifier, logged.UserIdentifier)
-	assert.Equal(t, event.Outcome, logged.Outcome)
 }
 
 func TestFileLogger_Log_MultipleEvents(t *testing.T) {
@@ -96,10 +94,10 @@ func TestFileLogger_Log_MultipleEvents(t *testing.T) {
 	ctx := context.Background()
 
 	// Log multiple events
-	events := []events.AuditEvent{
-		{EventID: "event1", Timestamp: time.Now(), EventType: events.EventAuthSuccess, Outcome: events.OutcomeSuccess},
-		{EventID: "event2", Timestamp: time.Now(), EventType: events.EventAuthFailure, Outcome: events.OutcomeFailure},
-		{EventID: "event3", Timestamp: time.Now(), EventType: events.EventTokenGenerate, Outcome: events.OutcomeSuccess},
+	events := []events.Event{
+		{EventID: "event1", Timestamp: time.Now(), Type: events.EventAssertionAttempt},
+		{EventID: "event2", Timestamp: time.Now(), Type: events.EventAssertionFailure},
+		{EventID: "event3", Timestamp: time.Now(), Type: events.EventAssertionSuccess},
 	}
 
 	for _, event := range events {
@@ -129,11 +127,10 @@ func TestFileLogger_Log_Append(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	event1 := events.AuditEvent{
+	event1 := events.Event{
 		EventID:   "event1",
 		Timestamp: time.Now(),
-		EventType: events.EventAuthSuccess,
-		Outcome:   events.OutcomeSuccess,
+		Type:      events.EventAssertionSuccess,
 	}
 
 	err = logger1.Log(ctx, event1)
@@ -146,11 +143,10 @@ func TestFileLogger_Log_Append(t *testing.T) {
 	require.NoError(t, err)
 	defer logger2.Close()
 
-	event2 := events.AuditEvent{
+	event2 := events.Event{
 		EventID:   "event2",
 		Timestamp: time.Now(),
-		EventType: events.EventAuthFailure,
-		Outcome:   events.OutcomeFailure,
+		Type:      events.EventAssertionSuccess,
 	}
 
 	err = logger2.Log(ctx, event2)
@@ -176,11 +172,10 @@ func TestFileLogger_WithPrettyPrint(t *testing.T) {
 	defer logger.Close()
 
 	ctx := context.Background()
-	event := events.AuditEvent{
+	event := events.Event{
 		EventID:   "event123",
 		Timestamp: time.Now(),
-		EventType: events.EventAuthSuccess,
-		Outcome:   events.OutcomeSuccess,
+		Type:      events.EventAssertionSuccess,
 	}
 
 	err = logger.Log(ctx, event)
@@ -205,10 +200,10 @@ func TestFileLogger_Close(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	event := events.AuditEvent{
+	event := events.Event{
 		EventID:   "event123",
 		Timestamp: time.Now(),
-		EventType: events.EventAuthSuccess,
+		Type:      events.EventAssertionSuccess,
 	}
 
 	err = logger.Log(ctx, event)
@@ -237,10 +232,10 @@ func TestFileLogger_Sync(t *testing.T) {
 	defer logger.Close()
 
 	ctx := context.Background()
-	event := events.AuditEvent{
+	event := events.Event{
 		EventID:   "event123",
 		Timestamp: time.Now(),
-		EventType: events.EventAuthSuccess,
+		Type:      events.EventAssertionSuccess,
 	}
 
 	err = logger.Log(ctx, event)
@@ -273,10 +268,10 @@ func TestFileLogger_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func(id int) {
 			for j := 0; j < eventsPerGoroutine; j++ {
-				event := events.AuditEvent{
+				event := events.Event{
 					EventID:   string(rune('A' + id)),
 					Timestamp: time.Now(),
-					EventType: events.EventAuthSuccess,
+					Type:      events.EventAssertionSuccess,
 				}
 				_ = logger.Log(ctx, event)
 			}

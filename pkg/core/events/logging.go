@@ -6,40 +6,31 @@ import (
 	"encoding/hex"
 	"net/http"
 	"time"
-
-	"github.com/google/uuid"
 )
 
-// AuditEvent represents a security-relevant event for logging purposes.
+// Event represents a security or performance relevant event for logging purposes.
 //
 // Security Note: This struct is designed to exclude sensitive information.
 // Do not add fields that might contain passwords, private keys, or full credential data.
 //
 // @mitigation Information Disclosure: Explicitly excludes sensitive fields to prevent
 // accidental logging of credentials or keys.
-type AuditEvent struct {
+type Event struct {
 	// EventID is a unique identifier for this event (e.g., UUID).
 	EventID string
 
 	// Timestamp records when the event occurred.
 	Timestamp time.Time
 
-	// EventType categorizes the event (e.g., "auth.attempt", "auth.success", "auth.failure",
-	// "credential.register", "token.generate", "token.revoke").
-	EventType string
+	// EventType categorizes the event (e.g., "attestation.attempt" or "assertion.success").
+	Type Type
 
-	// Method indicates the authentication method involved (e.g., "webauthn", "srp", "signed_token").
-	Method string
+	// Protocol indicates the authentication method involved (e.g., "webauthn" or "srp").
+	Protocol Protocol
 
 	// UserIdentifier identifies the user associated with this event.
 	// May be empty for anonymous operations or registration attempts.
 	UserIdentifier string
-
-	// CredentialID identifies the credential involved, if applicable.
-	CredentialID string
-
-	// Outcome indicates the result of the operation (e.g., "success", "failure", "error").
-	Outcome string
 
 	// Reason provides additional context for the outcome (e.g., "expired_token", "invalid_signature").
 	// This should be a machine-readable code, not a user-facing message.
@@ -56,25 +47,49 @@ type AuditEvent struct {
 	Metadata map[string]interface{}
 }
 
-// EventType constants for common audit events.
+// Event Types
+
+type Type int
+
 const (
-	EventAuthAttempt        = "auth.attempt"
-	EventAuthSuccess        = "auth.success"
-	EventAuthFailure        = "auth.failure"
-	EventCredentialRegister = "credential.register"
-	EventCredentialDelete   = "credential.delete"
-	EventCredentialUpdate   = "credential.update"
-	EventTokenGenerate      = "token.generate"
-	EventTokenVerify        = "token.verify"
-	EventTokenRevoke        = "token.revoke"
+	EventAttestationAttempt Type = iota
+	EventAttestationSuccess
+	EventAttestationFailure
+	EventAssertionAttempt
+	EventAssertionSuccess
+	EventAssertionFailure
 )
 
-// Outcome constants for audit events.
+var eventStrings = map[Type]string{
+	EventAttestationAttempt: "attestation.attempt",
+	EventAttestationSuccess: "attestation.success",
+	EventAttestationFailure: "attestation.failure",
+	EventAssertionAttempt:   "assertion.attempt",
+	EventAssertionSuccess:   "assertion.success",
+	EventAssertionFailure:   "assertion.failure",
+}
+
+func (evtType Type) String() string {
+	return eventStrings[evtType]
+}
+
+// Protocols
+
+type Protocol int
+
 const (
-	OutcomeSuccess = "success"
-	OutcomeFailure = "failure"
-	OutcomeError   = "error"
+	ProtocolSecureRemotePassword Protocol = iota
+	ProtocolWebAuthn
 )
+
+var protocolStrings = map[Protocol]string{
+	ProtocolSecureRemotePassword: "srp",
+	ProtocolWebAuthn:             "webauthn",
+}
+
+func (protocol Protocol) String() string {
+	return protocolStrings[protocol]
+}
 
 // EventLogger defines the interface for structured security event logging.
 // All authentication operations generate audit events that are passed to this interface.
@@ -84,7 +99,7 @@ const (
 // Security Considerations:
 //
 // @risk Information Disclosure: Implementations MUST NOT log sensitive data such as
-// passwords, private keys, tokens, or full credentials. The AuditEvent struct is
+// passwords, private keys, tokens, or full credentials. The Event struct is
 // designed to exclude such data; custom implementations should maintain this contract.
 //
 // @risk Repudiation: Comprehensive audit logging is essential for security investigations
@@ -99,55 +114,53 @@ type EventLogger interface {
 	// Implementations should not return errors for logging failures unless absolutely
 	// necessary. Consider logging errors to stderr or a fallback mechanism rather than
 	// disrupting authentication flows.
-	Log(ctx context.Context, event AuditEvent) error
+	Log(ctx context.Context, event Event) error
 }
 
-// NewAuditEvent creates a new AuditEvent with common fields pre-populated.
+// NewEvent creates a new Event with common fields pre-populated.
 // This is a convenience function that generates a unique EventID and sets the timestamp.
 //
 // Usage:
 //
-//	event := core.NewAuditEvent(
+//	event := core.NewEvent(
 //	    core.EventAuthSuccess,
 //	    "webauthn",
 //	    "user123",
 //	    core.OutcomeSuccess,
 //	)
-func NewAuditEvent(eventType, method, userIdentifier, outcome string) AuditEvent {
-	return AuditEvent{
-		EventID:        uuid.New().String(),
+func NewEvent(eventType Type, protocol Protocol, userIdentifier string) Event {
+	return Event{
+		EventID:        GenerateEventID(),
 		Timestamp:      time.Now().UTC(),
-		EventType:      eventType,
-		Method:         method,
+		Type:           eventType,
+		Protocol:       protocol,
 		UserIdentifier: userIdentifier,
-		Outcome:        outcome,
 		Metadata:       make(map[string]interface{}),
 	}
 }
 
-// AuditEventBuilder provides a fluent interface for constructing AuditEvent objects.
+// EventBuilder provides a fluent interface for constructing Event objects.
 // This builder pattern makes it easier to create events with optional fields.
 //
 // Usage:
 //
-//	event := core.NewAuditEventBuilder().
+//	event := core.NewEventBuilder().
 //	    WithEventType(core.EventAuthSuccess).
 //	    WithMethod("webauthn").
 //	    WithUserID("user123").
-//	    WithOutcome(core.OutcomeSuccess).
 //	    WithCredentialID("cred456").
 //	    WithReason("valid_signature").
 //	    WithMetadata("authenticator_type", "platform").
 //	    Build()
-type AuditEventBuilder struct {
-	event AuditEvent
+type EventBuilder struct {
+	event Event
 }
 
-// NewAuditEventBuilder creates a new AuditEventBuilder with an event ID and timestamp.
-func NewAuditEventBuilder() *AuditEventBuilder {
-	return &AuditEventBuilder{
-		event: AuditEvent{
-			EventID:   uuid.New().String(),
+// NewEventBuilder creates a new EventBuilder with an event ID and timestamp.
+func NewEventBuilder() *EventBuilder {
+	return &EventBuilder{
+		event: Event{
+			EventID:   GenerateEventID(),
 			Timestamp: time.Now().UTC(),
 			Metadata:  make(map[string]interface{}),
 		},
@@ -155,61 +168,49 @@ func NewAuditEventBuilder() *AuditEventBuilder {
 }
 
 // WithEventID sets a custom event ID (overrides the auto-generated UUID).
-func (b *AuditEventBuilder) WithEventID(eventID string) *AuditEventBuilder {
+func (b *EventBuilder) WithEventID(eventID string) *EventBuilder {
 	b.event.EventID = eventID
 	return b
 }
 
 // WithTimestamp sets a custom timestamp (overrides the auto-generated timestamp).
-func (b *AuditEventBuilder) WithTimestamp(timestamp time.Time) *AuditEventBuilder {
+func (b *EventBuilder) WithTimestamp(timestamp time.Time) *EventBuilder {
 	b.event.Timestamp = timestamp
 	return b
 }
 
 // WithEventType sets the event type.
-func (b *AuditEventBuilder) WithEventType(eventType string) *AuditEventBuilder {
-	b.event.EventType = eventType
+func (b *EventBuilder) WithEventType(eventType Type) *EventBuilder {
+	b.event.Type = eventType
 	return b
 }
 
-// WithMethod sets the authentication method.
-func (b *AuditEventBuilder) WithMethod(method string) *AuditEventBuilder {
-	b.event.Method = method
+// WithProtocol sets the authentication protocol.
+func (b *EventBuilder) WithProtocol(protocol Protocol) *EventBuilder {
+	b.event.Protocol = protocol
 	return b
 }
 
 // WithUserID sets the user identifier.
-func (b *AuditEventBuilder) WithUserIdentifier(userIdentifier string) *AuditEventBuilder {
+func (b *EventBuilder) WithUserIdentifier(userIdentifier string) *EventBuilder {
 	b.event.UserIdentifier = userIdentifier
 	return b
 }
 
-// WithCredentialID sets the credential identifier.
-func (b *AuditEventBuilder) WithCredentialID(credentialID string) *AuditEventBuilder {
-	b.event.CredentialID = credentialID
-	return b
-}
-
-// WithOutcome sets the outcome.
-func (b *AuditEventBuilder) WithOutcome(outcome string) *AuditEventBuilder {
-	b.event.Outcome = outcome
-	return b
-}
-
 // WithReason sets the reason/error code.
-func (b *AuditEventBuilder) WithReason(reason string) *AuditEventBuilder {
+func (b *EventBuilder) WithReason(reason string) *EventBuilder {
 	b.event.Reason = reason
 	return b
 }
 
 // WithIPAddress sets the source IP address.
-func (b *AuditEventBuilder) WithIPAddress(ipAddress string) *AuditEventBuilder {
+func (b *EventBuilder) WithIPAddress(ipAddress string) *EventBuilder {
 	b.event.IPAddress = ipAddress
 	return b
 }
 
 // WithUserAgent sets the user agent string.
-func (b *AuditEventBuilder) WithUserAgent(userAgent string) *AuditEventBuilder {
+func (b *EventBuilder) WithUserAgent(userAgent string) *EventBuilder {
 	b.event.UserAgent = userAgent
 	return b
 }
@@ -218,7 +219,7 @@ func (b *AuditEventBuilder) WithUserAgent(userAgent string) *AuditEventBuilder {
 //
 // @risk Information Disclosure: Ensure values do not contain sensitive data
 // such as passwords, private keys, or full credentials.
-func (b *AuditEventBuilder) WithMetadata(key string, value interface{}) *AuditEventBuilder {
+func (b *EventBuilder) WithMetadata(key string, value interface{}) *EventBuilder {
 	b.event.Metadata[key] = value
 	return b
 }
@@ -226,15 +227,15 @@ func (b *AuditEventBuilder) WithMetadata(key string, value interface{}) *AuditEv
 // WithMetadataMap merges the provided map into the event's metadata.
 //
 // @risk Information Disclosure: Ensure the map does not contain sensitive data.
-func (b *AuditEventBuilder) WithMetadataMap(metadata map[string]interface{}) *AuditEventBuilder {
+func (b *EventBuilder) WithMetadataMap(metadata map[string]interface{}) *EventBuilder {
 	for k, v := range metadata {
 		b.event.Metadata[k] = v
 	}
 	return b
 }
 
-// Build returns the constructed AuditEvent.
-func (b *AuditEventBuilder) Build() AuditEvent {
+// Build returns the constructed Event.
+func (b *EventBuilder) Build() Event {
 	return b.event
 }
 
@@ -247,7 +248,7 @@ func (b *AuditEventBuilder) Build() AuditEvent {
 // Usage:
 //
 //	metadata := core.HTTPRequestContext(r)
-//	event := core.NewAuditEventBuilder().
+//	event := core.NewEventBuilder().
 //	    WithEventType(core.EventAuthAttempt).
 //	    WithIPAddress(metadata["ip_address"].(string)).
 //	    WithUserAgent(metadata["user_agent"].(string)).
@@ -279,20 +280,20 @@ func HTTPRequestContext(r *http.Request) map[string]interface{} {
 	return metadata
 }
 
-// HTTPContextToAuditEvent is a helper that extracts HTTP context from a request
-// and applies it to an AuditEventBuilder.
+// HTTPContextToEvent is a helper that extracts HTTP context from a request
+// and applies it to an EventBuilder.
 //
 // Usage:
 //
-//	event := core.NewAuditEventBuilder().
+//	event := core.NewEventBuilder().
 //	    WithEventType(core.EventAuthSuccess).
 //	    WithMethod("webauthn").
 //	    WithUserID(userID)
 //
-//	core.HTTPContextToAuditEvent(r, event)
+//	core.HTTPContextToEvent(r, event)
 //
 //	finalEvent := event.WithOutcome(core.OutcomeSuccess).Build()
-func HTTPContextToAuditEvent(r *http.Request, builder *AuditEventBuilder) *AuditEventBuilder {
+func HTTPContextToEvent(r *http.Request, builder *EventBuilder) *EventBuilder {
 	metadata := HTTPRequestContext(r)
 
 	if ipAddr, ok := metadata["ip_address"].(string); ok {

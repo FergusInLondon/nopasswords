@@ -113,7 +113,7 @@ func NewFileLogger(filepath string, opts ...FileLoggerOption) (*FileLogger, erro
 }
 
 // Log implements events.AuditLogger by writing JSON to the file.
-func (f *FileLogger) Log(ctx context.Context, event events.AuditEvent) error {
+func (f *FileLogger) Log(ctx context.Context, event events.Event) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

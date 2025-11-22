@@ -8,37 +8,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewAuditEvent(t *testing.T) {
-	event := NewAuditEvent(EventAuthSuccess, "webauthn", "user123", OutcomeSuccess)
+func TestNewEvent(t *testing.T) {
+	event := NewEvent(EventAssertionSuccess, ProtocolWebAuthn, "user123")
 
 	assert.NotEmpty(t, event.EventID, "EventID should be generated")
-	assert.Equal(t, EventAuthSuccess, event.EventType)
-	assert.Equal(t, "webauthn", event.Method)
+	assert.Equal(t, EventAssertionSuccess, event.Type)
+	assert.Equal(t, ProtocolWebAuthn, event.Protocol)
 	assert.Equal(t, "user123", event.UserIdentifier)
-	assert.Equal(t, OutcomeSuccess, event.Outcome)
 	assert.NotZero(t, event.Timestamp)
 	assert.NotNil(t, event.Metadata)
 }
 
-func TestAuditEventBuilder(t *testing.T) {
+func TestEventBuilder(t *testing.T) {
 	t.Run("basic construction", func(t *testing.T) {
-		event := NewAuditEventBuilder().
-			WithEventType(EventAuthSuccess).
-			WithMethod("webauthn").
+		event := NewEventBuilder().
+			WithEventType(EventAssertionSuccess).
+			WithProtocol(ProtocolWebAuthn).
 			WithUserIdentifier("user123").
-			WithCredentialID("cred456").
-			WithOutcome(OutcomeSuccess).
 			WithReason("valid_signature").
 			WithIPAddress("192.168.1.1").
 			WithUserAgent("Mozilla/5.0").
 			Build()
 
 		assert.NotEmpty(t, event.EventID)
-		assert.Equal(t, EventAuthSuccess, event.EventType)
-		assert.Equal(t, "webauthn", event.Method)
+		assert.Equal(t, EventAssertionSuccess, event.Type)
+		assert.Equal(t, ProtocolWebAuthn, event.Protocol)
 		assert.Equal(t, "user123", event.UserIdentifier)
-		assert.Equal(t, "cred456", event.CredentialID)
-		assert.Equal(t, OutcomeSuccess, event.Outcome)
 		assert.Equal(t, "valid_signature", event.Reason)
 		assert.Equal(t, "192.168.1.1", event.IPAddress)
 		assert.Equal(t, "Mozilla/5.0", event.UserAgent)
@@ -46,10 +41,10 @@ func TestAuditEventBuilder(t *testing.T) {
 
 	t.Run("custom event ID and timestamp", func(t *testing.T) {
 		customTime := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
-		event := NewAuditEventBuilder().
+		event := NewEventBuilder().
 			WithEventID("custom-id-123").
 			WithTimestamp(customTime).
-			WithEventType(EventAuthFailure).
+			WithEventType(EventAssertionFailure).
 			Build()
 
 		assert.Equal(t, "custom-id-123", event.EventID)
@@ -57,8 +52,8 @@ func TestAuditEventBuilder(t *testing.T) {
 	})
 
 	t.Run("metadata", func(t *testing.T) {
-		event := NewAuditEventBuilder().
-			WithEventType(EventAuthSuccess).
+		event := NewEventBuilder().
+			WithEventType(EventAssertionSuccess).
 			WithMetadata("key1", "value1").
 			WithMetadata("key2", 123).
 			WithMetadata("key3", true).
@@ -76,8 +71,8 @@ func TestAuditEventBuilder(t *testing.T) {
 			"key3": true,
 		}
 
-		event := NewAuditEventBuilder().
-			WithEventType(EventAuthSuccess).
+		event := NewEventBuilder().
+			WithEventType(EventAssertionSuccess).
 			WithMetadataMap(metadata).
 			Build()
 
@@ -87,21 +82,19 @@ func TestAuditEventBuilder(t *testing.T) {
 	})
 
 	t.Run("fluent interface chaining", func(t *testing.T) {
-		builder := NewAuditEventBuilder()
+		builder := NewEventBuilder()
 
 		// Should be able to chain multiple calls
 		builder.
-			WithEventType(EventTokenGenerate).
-			WithMethod("signed_token").
-			WithUserIdentifier("user789").
-			WithOutcome(OutcomeSuccess)
+			WithEventType(EventAttestationAttempt).
+			WithProtocol(ProtocolSecureRemotePassword).
+			WithUserIdentifier("user789")
 
 		event := builder.Build()
 
-		assert.Equal(t, EventTokenGenerate, event.EventType)
-		assert.Equal(t, "signed_token", event.Method)
+		assert.Equal(t, EventAttestationAttempt, event.Type)
+		assert.Equal(t, ProtocolSecureRemotePassword, event.Protocol)
 		assert.Equal(t, "user789", event.UserIdentifier)
-		assert.Equal(t, OutcomeSuccess, event.Outcome)
 	})
 }
 
@@ -179,21 +172,21 @@ func TestHTTPRequestContext(t *testing.T) {
 	})
 }
 
-func TestHTTPContextToAuditEvent(t *testing.T) {
+func TestHTTPContextToEvent(t *testing.T) {
 	t.Run("applies HTTP context to builder", func(t *testing.T) {
 		req := httptest.NewRequest("POST", "/api/auth/login", nil)
 		req.RemoteAddr = "192.168.1.1:12345"
 		req.Header.Set("User-Agent", "Mozilla/5.0")
 		req.Header.Set("Referer", "https://example.com")
 
-		builder := NewAuditEventBuilder().
-			WithEventType(EventAuthAttempt).
-			WithMethod("webauthn").
+		builder := NewEventBuilder().
+			WithEventType(EventAttestationFailure).
+			WithProtocol(ProtocolWebAuthn).
 			WithUserIdentifier("user123")
 
-		HTTPContextToAuditEvent(req, builder)
+		HTTPContextToEvent(req, builder)
 
-		event := builder.WithOutcome(OutcomeSuccess).Build()
+		event := builder.Build()
 
 		assert.Equal(t, "192.168.1.1:12345", event.IPAddress)
 		assert.Equal(t, "Mozilla/5.0", event.UserAgent)
@@ -205,17 +198,17 @@ func TestHTTPContextToAuditEvent(t *testing.T) {
 	t.Run("preserves existing builder state", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/status", nil)
 
-		builder := NewAuditEventBuilder().
-			WithEventType(EventAuthSuccess).
+		builder := NewEventBuilder().
+			WithEventType(EventAssertionSuccess).
 			WithUserIdentifier("user456").
 			WithMetadata("existing_key", "existing_value")
 
-		HTTPContextToAuditEvent(req, builder)
+		HTTPContextToEvent(req, builder)
 
 		event := builder.Build()
 
 		// Should preserve existing fields
-		assert.Equal(t, EventAuthSuccess, event.EventType)
+		assert.Equal(t, EventAssertionSuccess, event.Type)
 		assert.Equal(t, "user456", event.UserIdentifier)
 		assert.Equal(t, "existing_value", event.Metadata["existing_key"])
 
@@ -225,7 +218,7 @@ func TestHTTPContextToAuditEvent(t *testing.T) {
 	})
 }
 
-func TestAuditEventBuilder_Integration(t *testing.T) {
+func TestEventBuilder_Integration(t *testing.T) {
 	// Simulate a complete authentication flow with HTTP request
 	req := httptest.NewRequest("POST", "/api/webauthn/authenticate", nil)
 	req.RemoteAddr = "203.0.113.1:54321"
@@ -233,15 +226,13 @@ func TestAuditEventBuilder_Integration(t *testing.T) {
 	req.Header.Set("X-Forwarded-For", "198.51.100.42")
 
 	// Build audit event using helpers
-	builder := NewAuditEventBuilder().
-		WithEventType(EventAuthSuccess).
-		WithMethod("webauthn").
+	builder := NewEventBuilder().
+		WithEventType(EventAssertionSuccess).
+		WithProtocol(ProtocolWebAuthn).
 		WithUserIdentifier("user789").
-		WithCredentialID("cred123").
-		WithOutcome(OutcomeSuccess).
 		WithReason("valid_signature")
 
-	HTTPContextToAuditEvent(req, builder)
+	HTTPContextToEvent(req, builder)
 
 	event := builder.
 		WithMetadata("authenticator_type", "platform").
@@ -251,11 +242,9 @@ func TestAuditEventBuilder_Integration(t *testing.T) {
 	// Verify all fields are populated correctly
 	assert.NotEmpty(t, event.EventID)
 	assert.NotZero(t, event.Timestamp)
-	assert.Equal(t, EventAuthSuccess, event.EventType)
-	assert.Equal(t, "webauthn", event.Method)
+	assert.Equal(t, EventAssertionSuccess, event.Type)
+	assert.Equal(t, ProtocolWebAuthn, event.Protocol)
 	assert.Equal(t, "user789", event.UserIdentifier)
-	assert.Equal(t, "cred123", event.CredentialID)
-	assert.Equal(t, OutcomeSuccess, event.Outcome)
 	assert.Equal(t, "valid_signature", event.Reason)
 	assert.Equal(t, "198.51.100.42", event.IPAddress) // X-Forwarded-For
 	assert.Equal(t, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", event.UserAgent)
@@ -263,32 +252,4 @@ func TestAuditEventBuilder_Integration(t *testing.T) {
 	assert.Equal(t, "/api/webauthn/authenticate", event.Metadata["http_path"])
 	assert.Equal(t, "platform", event.Metadata["authenticator_type"])
 	assert.Equal(t, 42, event.Metadata["sign_count"])
-}
-
-func BenchmarkNewAuditEvent(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		_ = NewAuditEvent(EventAuthSuccess, "webauthn", "user123", OutcomeSuccess)
-	}
-}
-
-func BenchmarkAuditEventBuilder(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		_ = NewAuditEventBuilder().
-			WithEventType(EventAuthSuccess).
-			WithMethod("webauthn").
-			WithUserIdentifier("user123").
-			WithOutcome(OutcomeSuccess).
-			Build()
-	}
-}
-
-func BenchmarkHTTPRequestContext(b *testing.B) {
-	req := httptest.NewRequest("POST", "/api/auth", nil)
-	req.RemoteAddr = "192.168.1.1:12345"
-	req.Header.Set("User-Agent", "Mozilla/5.0")
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = HTTPRequestContext(req)
-	}
 }

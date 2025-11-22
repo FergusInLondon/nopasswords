@@ -84,11 +84,11 @@ func (m *Manager) AttestationHandlerFunc(h AttestationSucccessFunc) http.Handler
 		eventStream := newBuildableEvent(
 			r.Context(), m.config.AuditLogger, events.GenerateEventID(),
 		)
-		eventOutcome := events.OutcomeFailure
+		eventType := events.EventAssertionFailure
 
 		startTime := time.Now()
 		defer func() {
-			eventStream.log(events.EventCredentialRegister, eventOutcome, "attestation_complete", map[string]interface{}{
+			eventStream.log(eventType, "attestation_complete", map[string]interface{}{
 				"group":    m.config.Group,
 				"duration": time.Since(startTime).Milliseconds(),
 			})
@@ -114,7 +114,7 @@ func (m *Manager) AttestationHandlerFunc(h AttestationSucccessFunc) http.Handler
 
 		// Validate request
 		if req.UserIdentifier == "" {
-			eventStream.log(events.EventCredentialRegister, eventOutcome, "empty_user_id", nil)
+			eventStream.log(eventType, "empty_user_id", nil)
 			sendAttestationResponse(w, &AttestationResponse{
 				Success:        false,
 				UserIdentifier: "user ID cannot be empty",
@@ -125,7 +125,7 @@ func (m *Manager) AttestationHandlerFunc(h AttestationSucccessFunc) http.Handler
 		eventStream.withUserIdentifier(req.UserIdentifier)
 
 		if len(req.Salt) < MinSaltLength {
-			eventStream.log(events.EventCredentialRegister, eventOutcome, "invalid_salt_length", nil)
+			eventStream.log(eventType, "invalid_salt_length", nil)
 			sendAttestationResponse(w, &AttestationResponse{
 				Success:        false,
 				UserIdentifier: "insufficient salt length",
@@ -134,7 +134,7 @@ func (m *Manager) AttestationHandlerFunc(h AttestationSucccessFunc) http.Handler
 		}
 
 		if len(req.Verifier) == 0 {
-			eventStream.log(events.EventCredentialRegister, eventOutcome, "empty_verifier", nil)
+			eventStream.log(eventType, "empty_verifier", nil)
 			sendAttestationResponse(w, &AttestationResponse{
 				Success:        false,
 				UserIdentifier: "verifier cannot be empty",
@@ -144,7 +144,7 @@ func (m *Manager) AttestationHandlerFunc(h AttestationSucccessFunc) http.Handler
 
 		// Validate group
 		if req.Group != m.config.Group {
-			eventStream.log(events.EventCredentialRegister, eventOutcome, "invalid_salt_length", map[string]interface{}{
+			eventStream.log(eventType, "invalid_salt_length", map[string]interface{}{
 				"requested_group": req.Group,
 				"expected_group":  m.config.Group,
 			})
@@ -164,7 +164,7 @@ func (m *Manager) AttestationHandlerFunc(h AttestationSucccessFunc) http.Handler
 		}
 
 		if err := m.config.Store.StoreForUserIdentifier(req.UserIdentifier, assertionParams); err != nil {
-			eventStream.log(events.EventCredentialRegister, eventOutcome, "storage_failure", map[string]interface{}{
+			eventStream.log(eventType, "storage_failure", map[string]interface{}{
 				"err": err.Error(),
 			})
 			sendAttestationResponse(w, &AttestationResponse{

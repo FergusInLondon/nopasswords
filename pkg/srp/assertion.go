@@ -93,11 +93,10 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 		eventStream := newBuildableEvent(
 			r.Context(), m.config.AuditLogger, events.GenerateEventID(),
 		)
-		eventOutcome := events.OutcomeFailure
 
 		startTime := time.Now()
 		defer func() {
-			eventStream.log(events.EventAuthAttempt, eventOutcome, "assertion_initiated", map[string]interface{}{
+			eventStream.log(events.EventAssertionAttempt, "assertion_initiated", map[string]interface{}{
 				"group":    m.config.Group,
 				"duration": time.Since(startTime).Milliseconds(),
 			})
@@ -115,7 +114,7 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 		}
 
 		if req.UserIdentifier == "" {
-			eventStream.log(events.EventAuthAttempt, eventOutcome, "empty_user_id", nil)
+			eventStream.log(events.EventAssertionAttempt, "empty_user_id", nil)
 			http.Error(w, "user identifier cannot be empty", http.StatusBadRequest)
 			return
 		}
@@ -123,7 +122,7 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 
 		assertionParams, err := m.config.Store.GetForUserIdentifier(req.UserIdentifier)
 		if err != nil {
-			eventStream.log(events.EventAuthAttempt, eventOutcome, "no_assertion_params", nil)
+			eventStream.log(events.EventAssertionAttempt, "no_assertion_params", nil)
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -132,7 +131,7 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 		//  i.e. for in-place upgrades?
 		if assertionParams.Group != m.config.Group {
 			eventStream.log(
-				events.EventAuthAttempt, eventOutcome, "group_mismatch", map[string]interface{}{
+				events.EventAssertionAttempt, "group_mismatch", map[string]interface{}{
 					"stored_group":   assertionParams.Group,
 					"expected_group": m.config.Group,
 				},
@@ -147,7 +146,7 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 		// session key prediction.
 		b, err := generateRandomBigInt(256)
 		if err != nil {
-			eventStream.log(events.EventAuthAttempt, eventOutcome, "random_generation_failed", nil)
+			eventStream.log(events.EventAssertionAttempt, "random_generation_failed", nil)
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -176,7 +175,6 @@ func (m *Manager) AssertionBeginHandler() http.HandlerFunc {
 			v:           v,
 		})
 
-		eventOutcome = events.OutcomeSuccess
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(&AssertionInitiationResponse{
 			Salt:  assertionParams.Salt,
@@ -250,14 +248,14 @@ type AssertionSuccessFunc func(string, http.ResponseWriter, *http.Request) error
 // @mitigation Elevation of Privilege: Session key is derived correctly per RFC5054.
 func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
 		eventStream := newBuildableEvent(
 			r.Context(), m.config.AuditLogger, events.GenerateEventID(),
 		)
-		eventOutcome := events.OutcomeFailure
 
-		startTime := time.Now()
+		eventType := events.EventAssertionFailure
 		defer func() {
-			eventStream.log(events.EventAuthSuccess, eventOutcome, "assertion_complete", map[string]interface{}{
+			eventStream.log(eventType, "assertion_complete", map[string]interface{}{
 				"group":    m.config.Group,
 				"duration": time.Since(startTime).Milliseconds(),
 			})
@@ -275,7 +273,7 @@ func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.Hand
 		}
 
 		if req.UserIdentifier == "" {
-			eventStream.log(events.EventAuthAttempt, eventOutcome, "empty_user_id", nil)
+			eventStream.log(eventType, "empty_user_id", nil)
 			http.Error(w, "user identifier cannot be empty", http.StatusUnauthorized)
 			return
 		}
@@ -284,7 +282,7 @@ func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.Hand
 
 		assertionState, err := m.config.Cache.GetForUserIdentifier(req.UserIdentifier)
 		if err != nil {
-			eventStream.log(events.EventAuthAttempt, eventOutcome, "no_assertion_state", nil)
+			eventStream.log(eventType, "no_assertion_state", nil)
 			http.Error(w, err.Error(), http.StatusUnauthorized) // TODO sanitise the errors we're sending out!
 			return
 		}
@@ -298,7 +296,7 @@ func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.Hand
 		// @mitigation Tampering: Reject invalid A values that could compromise security
 		Amod := new(big.Int).Mod(A, m.group.N)
 		if Amod.Cmp(big.NewInt(0)) == 0 {
-			eventStream.log(events.EventAuthAttempt, eventOutcome, "invalid_client_ephemeral", nil)
+			eventStream.log(events.EventAssertionAttempt, "invalid_client_ephemeral", nil)
 			http.Error(w, "invalid client ephemeral value", http.StatusUnauthorized)
 			return
 		}
@@ -323,7 +321,7 @@ func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.Hand
 		// @mitigation Information Disclosure: Constant-time comparison prevents timing attacks
 		// that could leak information about the password
 		if subtle.ConstantTimeCompare(req.M1, expectedM1) != 1 {
-			eventStream.log(events.EventAuthFailure, eventOutcome, "invalid_proof", map[string]interface{}{
+			eventStream.log(eventType, "invalid_proof", map[string]interface{}{
 				"duration": time.Since(startTime).Milliseconds(),
 			})
 			http.Error(w, "authentication failed: invalid proof", http.StatusUnauthorized)
@@ -334,14 +332,14 @@ func (m *Manager) AssertionVerificationHandler(h AssertionSuccessFunc) http.Hand
 		M2 := m.computeM2(req.A, req.M1, K)
 
 		if err := h(req.UserIdentifier, w, r); err != nil {
-			eventStream.log(events.EventAuthFailure, eventOutcome, "callback_failure", map[string]interface{}{
+			eventStream.log(eventType, "callback_failure", map[string]interface{}{
 				"reason": err.Error(),
 			})
 
 			http.Error(w, "unknown error", http.StatusInternalServerError)
 		}
 
-		eventOutcome = events.OutcomeSuccess
+		eventType = events.EventAssertionSuccess
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(&AssertionCompletionResponse{
 			Success: true,

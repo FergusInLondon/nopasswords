@@ -22,7 +22,7 @@ func NewNopLogger() *NopLogger {
 }
 
 // Log implements events.AuditLogger by discarding the event.
-func (n *NopLogger) Log(ctx context.Context, event events.AuditEvent) error {
+func (n *NopLogger) Log(ctx context.Context, event events.Event) error {
 	// Intentionally do nothing
 	return nil
 }
@@ -33,7 +33,7 @@ func (n *NopLogger) Log(ctx context.Context, event events.AuditEvent) error {
 //
 // This implementation is safe for concurrent use by multiple goroutines.
 //
-// @mitigation Information Disclosure: The AuditEvent struct is designed to exclude
+// @mitigation Information Disclosure: The Event struct is designed to exclude
 // sensitive data. This logger outputs the event as-is; ensure no sensitive data
 // is added to the Metadata field by calling code.
 //
@@ -63,7 +63,7 @@ func NewStdoutLogger(pretty bool) *StdoutLogger {
 }
 
 // Log implements events.AuditLogger by writing JSON to stdout.
-func (s *StdoutLogger) Log(ctx context.Context, event events.AuditEvent) error {
+func (s *StdoutLogger) Log(ctx context.Context, event events.Event) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -102,7 +102,7 @@ func NewStderrLogger(pretty bool) *StderrLogger {
 }
 
 // Log implements events.AuditLogger by writing JSON to stderr.
-func (s *StderrLogger) Log(ctx context.Context, event events.AuditEvent) error {
+func (s *StderrLogger) Log(ctx context.Context, event events.Event) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -126,7 +126,7 @@ func (s *StderrLogger) Log(ctx context.Context, event events.AuditEvent) error {
 type BufferedLogger struct {
 	mu        sync.Mutex
 	logger    events.EventLogger
-	buffer    []events.AuditEvent
+	buffer    []events.Event
 	maxSize   int
 	autoFlush bool
 }
@@ -138,14 +138,14 @@ type BufferedLogger struct {
 func NewBufferedLogger(logger events.EventLogger, maxSize int) *BufferedLogger {
 	return &BufferedLogger{
 		logger:    logger,
-		buffer:    make([]events.AuditEvent, 0, maxSize),
+		buffer:    make([]events.Event, 0, maxSize),
 		maxSize:   maxSize,
 		autoFlush: true,
 	}
 }
 
 // Log implements events.AuditLogger by buffering the event.
-func (b *BufferedLogger) Log(ctx context.Context, event events.AuditEvent) error {
+func (b *BufferedLogger) Log(ctx context.Context, event events.Event) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 

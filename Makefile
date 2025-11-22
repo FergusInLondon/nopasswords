@@ -22,7 +22,7 @@ COVERAGE_HTML=$(COVERAGE_DIR)/coverage.html
 
 # Example directories
 BUILT_CLIENT=client/dist/nopasswords.js
-EXAMPLE_DIRS=webauthn-demo srp-demo audit-logging
+EXAMPLES=webauthn-demo srp-demo
 
 ## help: Display this help message
 help:
@@ -103,18 +103,19 @@ client-install:
 	@echo "Installing client dependencies..."
 	cd client && npm install && cd ..
 
-## client-build: Build all client library
+## client-build: Build client library
 client-build:
 	@echo "Building client library..."
 	cd client && npm run build && cd ..
 
+## client: Build client library and populate example directories
 client: client-clean client-install client-build
-	cp ${BUILT_CLIENT}.map cmd/examples/webauthn-demo/static/nopasswords.min.js.map
-	cp ${BUILT_CLIENT} cmd/examples/webauthn-demo/static/nopasswords.min.js
-	cp ${BUILT_CLIENT}.map cmd/examples/srp-demo/static/nopasswords.min.js.map
-	cp ${BUILT_CLIENT} cmd/examples/srp-demo/static/nopasswords.min.js
+	@for ex in $(EXAMPLES); do \
+		cp ${BUILT_CLIENT}.map cmd/examples/$$ex/static/nopasswords.min.js.map; \
+		cp ${BUILT_CLIENT} cmd/examples/$$ex/static/nopasswords.min.js; \
+	done
 
-## client-lint: Lint all client code
+## client-lint: Lint client code
 client-lint:
 	@echo "Linting client code..."
 	if [ -f "client/package.json" ] && grep -q "\"lint\"" "client/package.json"; then \
@@ -132,9 +133,9 @@ client-clean:
 ## examples: Build all examples
 examples: client
 	@echo "Building examples..."
-	@for dir in $(EXAMPLES); do \
-		echo "Building $$dir..."; \
-		cd cmd/examples/$$dir && $(GOBUILD) -o $$(basename cmd/examples/$$dir) . && cd ../../..; \
+	@for ex in $(EXAMPLES); do \
+		echo "Building $$ex..."; \
+		cd cmd/examples/$$ex && $(GOBUILD) -o $$(basename cmd/examples/$$ex) . && cd ../../..; \
 	done
 
 ## dev: Start development environment (install deps, build clients)
