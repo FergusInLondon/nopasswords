@@ -1,3 +1,4 @@
+// Package events ... TODO
 package events
 
 import (
@@ -49,14 +50,21 @@ type Event struct {
 
 // Event Types
 
+// Type ... TODO
 type Type int
 
 const (
+	// EventAttestationAttempt ... TODO
 	EventAttestationAttempt Type = iota
+	// EventAttestationSuccess ... TODO
 	EventAttestationSuccess
+	// EventAttestationFailure ... TODO
 	EventAttestationFailure
+	// EventAssertionAttempt ... TODO
 	EventAssertionAttempt
+	// EventAssertionSuccess ... TODO
 	EventAssertionSuccess
+	// EventAssertionFailure ... TODO
 	EventAssertionFailure
 )
 
@@ -69,16 +77,20 @@ var eventStrings = map[Type]string{
 	EventAssertionFailure:   "assertion.failure",
 }
 
+// String ... TODO
 func (evtType Type) String() string {
 	return eventStrings[evtType]
 }
 
 // Protocols
 
+// Protocol ... TODO
 type Protocol int
 
 const (
+	// ProtocolSecureRemotePassword ... TODO
 	ProtocolSecureRemotePassword Protocol = iota
+	// ProtocolWebAuthn ... TODO
 	ProtocolWebAuthn
 )
 
@@ -87,6 +99,7 @@ var protocolStrings = map[Protocol]string{
 	ProtocolWebAuthn:             "webauthn",
 }
 
+// String ... TODO
 func (protocol Protocol) String() string {
 	return protocolStrings[protocol]
 }

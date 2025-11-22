@@ -1,3 +1,4 @@
+// Package memory ... TODO
 package memory
 
 import (
@@ -7,11 +8,13 @@ import (
 	"go.fergus.london/nopasswords/pkg/srp"
 )
 
+// ParameterStore ... TODO
 type ParameterStore struct {
 	mtx   sync.RWMutex
 	store map[string]*srp.Parameters
 }
 
+// NewInMemoryParameterStore ... TODO
 func NewInMemoryParameterStore() *ParameterStore {
 	return &ParameterStore{
 		mtx:   sync.RWMutex{},
@@ -19,6 +22,7 @@ func NewInMemoryParameterStore() *ParameterStore {
 	}
 }
 
+// GetForUserIdentifier ... TODO
 func (ps *ParameterStore) GetForUserIdentifier(ident string) (*srp.Parameters, error) {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()
@@ -30,6 +34,7 @@ func (ps *ParameterStore) GetForUserIdentifier(ident string) (*srp.Parameters, e
 	return nil, fmt.Errorf("no params available for '%s'", ident)
 }
 
+// StoreForUserIdentifier ... TODO
 func (ps *ParameterStore) StoreForUserIdentifier(ident string, params *srp.Parameters) error {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()

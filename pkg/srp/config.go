@@ -1,3 +1,4 @@
+// Package srp ... TODO
 package srp
 
 import (
@@ -44,13 +45,13 @@ type Parameters struct {
 	Group int `json:"group"`
 }
 
-// ParameterStore... TODO
+// ParameterStore ... TODO
 type ParameterStore interface {
 	GetForUserIdentifier(string) (*Parameters, error)
 	StoreForUserIdentifier(string, *Parameters) error
 }
 
-// StateCache... TODO
+// StateCache ... TODO
 type StateCache interface {
 	GetForUserIdentifier(string) (*AssertionState, error)
 	StoreForUserIdentifier(string, *AssertionState) error

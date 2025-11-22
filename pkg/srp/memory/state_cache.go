@@ -7,11 +7,13 @@ import (
 	"go.fergus.london/nopasswords/pkg/srp"
 )
 
+// StateCache ... TODO
 type StateCache struct {
 	mtx   sync.RWMutex
 	cache map[string]*srp.AssertionState
 }
 
+// NewInMemoryStateCache ... TODO
 func NewInMemoryStateCache() *StateCache {
 	return &StateCache{
 		mtx:   sync.RWMutex{},
@@ -19,6 +21,7 @@ func NewInMemoryStateCache() *StateCache {
 	}
 }
 
+// GetForUserIdentifier ... TODO
 func (sc *StateCache) GetForUserIdentifier(ident string) (*srp.AssertionState, error) {
 	sc.mtx.RLock()
 	defer sc.mtx.RUnlock()
@@ -30,6 +33,7 @@ func (sc *StateCache) GetForUserIdentifier(ident string) (*srp.AssertionState, e
 	return nil, fmt.Errorf("no state available for '%s'", ident)
 }
 
+// StoreForUserIdentifier ... TODO
 func (sc *StateCache) StoreForUserIdentifier(ident string, state *srp.AssertionState) error {
 	sc.mtx.Lock()
 	defer sc.mtx.Unlock()
@@ -38,6 +42,7 @@ func (sc *StateCache) StoreForUserIdentifier(ident string, state *srp.AssertionS
 	return nil
 }
 
+// PurgeForUserIdentity ... TODO
 func (sc *StateCache) PurgeForUserIdentity(ident string) error {
 	sc.mtx.Lock()
 	defer sc.mtx.Unlock()
