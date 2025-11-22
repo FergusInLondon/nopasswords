@@ -5,228 +5,185 @@
 [![GoDoc](https://pkg.go.dev/badge/go.fergus.london/nopasswords)](https://pkg.go.dev/go.fergus.london/nopasswords)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A comprehensive, production-ready Go library for passwordless authentication supporting multiple methods: WebAuthn/FIDO2, and Secure Remote Password (SRP).
+A Go library for passwordless authentication using Secure Remote Password (SRP) protocol. Simple, opinionless, and built for easy integration.
+
+> **Note**: Currently implements SRP (RFC5054). WebAuthn support is in development.
+
+## Why NoPasswords?
+
+This isn't an authentication/authorization framework—it's a **proof of presence** library. It handles the cryptographic complexity of verifying someone can prove they possess a credential, without prescribing how you structure your auth flows, sessions, or user management.
 
 ## Features
 
-- **🔐 Multiple Authentication Methods**
-  - **WebAuthn/FIDO2**: Hardware tokens, platform authenticators (Touch ID, Windows Hello), security keys
-  - **SRP (RFC5054)**: Zero-knowledge password proof without transmitting passwords
+- **🔐 SRP Protocol (RFC5054)**: Zero-knowledge password proof supporting 2048, 3072, and 4096-bit groups.
+- **🏗️ Opinionless Design**: Dependency injection for storage and logging—bring your own database and logging infrastructure.
+- **📊 Observable**: Built-in event logging interface with structured events for debugging and security monitoring.
+- **✅ Well-Tested**: Complete test coverage of authentication flows, with granular unit test coverage of critical/sensitive functions.
+- **📦 TypeScript Client**: Browser-ready SRP client library included.
 
-- **🏗️ Unopinionated Architecture**
-  - Dependency injection for storage and logging
-  - No forced opinions about databases, logging, or metrics
-  - Easy integration with existing infrastructure
+## Terminology
 
-- **🔒 Security First**
-  - Comprehensive audit logging
-  - STRIDE threat model coverage
-  - Constant-time comparisons
-  - Cryptographic best practices
+NoPasswords uses WebAuthn terminology:
 
-- **📦 Production Ready**
-  - Extensive test coverage with race detection
-  - TypeScript client libraries included
-  - Complete working examples
-  - Comprehensive documentation
+- **Attestation**: The registration/enrollment process where a user creates a new credential
+- **Assertion**: The authentication/verification process where a user proves possession of their credential
+
+This terminology reflects that the library proves presence rather than handling full authentication flows.
+
+## Installation
+
+```bash
+go get go.fergus.london/nopasswords
+```
 
 ## Quick Start
 
-### Example: WebAuthn
+### Server Setup
 
-See [`examples/webauthn-demo/`](examples/webauthn-demo/) for a complete working example with client and server code.
+```go
+package main
 
-### Example: SRP
+import (
+    "fmt"
+    "net/http"
 
-See [`examples/srp-demo/`](examples/srp-demo/) for a complete working example with client and server code.
+    "go.fergus.london/nopasswords/pkg/srp"
+    srpmem "go.fergus.london/nopasswords/pkg/srp/memory"
+    coremem "go.fergus.london/nopasswords/pkg/core/events/memory"
+)
 
-## Development Setup
+func main() {
+    // Initialize SRP manager with your implementations
+    manager, err := srp.NewManager(
+        srp.WithGroup(3),  // 2048-bit group
+        srp.WithEventLogger(coremem.NewStdoutLogger(true)),
+        srp.WithStateCache(srpmem.NewInMemoryStateCache()),
+        srp.WithParameterStore(srpmem.NewInMemoryParameterStore()),
+    )
+    if err != nil {
+        panic(err)
+    }
 
-### Prerequisites
+    // Attestation (registration) endpoint
+    http.HandleFunc("/api/register", manager.AttestationHandlerFunc(
+        func(params srp.Parameters) {
+            fmt.Printf("User registered: %s\n", params.UserIdentifier)
+            // Store user, create session, etc.
+        },
+    ))
 
-- Go 1.23 or later
-- Node.js 20 or later
-- Make
-- Docker (optional, for containerized development)
+    // Assertion (authentication) endpoints
+    http.HandleFunc("/api/login/begin", manager.AssertionBeginHandler())
+    http.HandleFunc("/api/login/finish", manager.AssertionVerificationHandler(
+        func(userID string, w http.ResponseWriter, r *http.Request) error {
+            fmt.Printf("User authenticated: %s\n", userID)
+            // Create session, issue tokens, etc.
+            return nil
+        },
+    ))
 
-### Local Development
-
-```bash
-# Clone the repository
-git clone https://github.com/FergusInLondon/nopasswords.git
-cd nopasswords
-
-# Set up development environment
-make dev
-
-# Run tests
-make test
-
-# Run tests with race detector
-make test-race
-
-# Run linters
-make lint
-
-# Build everything (Go + TypeScript)
-make all
-
-# Build and run examples
-make examples
+    http.ListenAndServe(":8080", nil)
+}
 ```
 
-### Docker Development
+### Client Setup (TypeScript)
 
-```bash
-# Start development environment
-docker compose up dev
+```typescript
+import { SRPClient } from '@nopasswords/srp-client';
 
-# Run tests in container
-docker compose run test
+// Registration
+const client = new SRPClient();
+await client.register('user@example.com', 'password', '/api/register');
 
-# Run WebAuthn example
-docker compose up webauthn-demo
-# Visit http://localhost:8080
+// Authentication
+const authClient = new SRPClient();
+await authClient.authenticate('user@example.com', 'password', {
+    beginURL: '/api/login/begin',
+    finishURL: '/api/login/finish'
+});
 ```
 
-## Project Structure
+See [cmd/examples/srp-demo](cmd/examples/srp-demo) for a complete working example with client and server code.
 
-```
-nopasswords/
-├── core/               # Core interfaces and types
-│   ├── memory/        # In-memory reference implementations
-│   └── *.go           # Shared types and interfaces
-├── webauthn/          # WebAuthn/FIDO2 implementation
-├── srp/               # Secure Remote Password implementation
-├── client/            # TypeScript WebAuthn client library
-├── client-srp/        # TypeScript SRP client library
-├── examples/          # Working example applications
-│   ├── webauthn-demo/
-│   ├── srp-demo/
-│   └── audit-logging/
-├── .github/           # GitHub Actions workflows
-└── Makefile           # Build automation
-```
+## Core Interfaces
 
-## Architecture
+NoPasswords uses dependency injection for flexibility. Implement these interfaces with your infrastructure:
 
-NoPasswords uses a **dependency injection** pattern for maximum flexibility:
+- **`ParameterStore`**: Persist user SRP parameters (verifier, salt)
+- **`StateCache`**: Temporarily store protocol state during authentication
+- **`EventLogger`**: Capture security events for monitoring and debugging
 
-1. **Core Interfaces**: Define contracts for storage and logging
-2. **Reference Implementations**: In-memory stores for development/testing
-3. **Production Integration**: Implement interfaces with your database, logging, etc.
+Reference implementations using in-memory storage are provided for development and testing. See [pkg/srp/memory](pkg/srp/memory) and [pkg/core/events/memory](pkg/core/events/memory).
 
-### Key Interfaces
+## Observability & Debugging
 
-- **`CredentialStore`**: Store and retrieve authentication credentials
-- **`AuditLogger`**: Security event logging
+The library provides comprehensive observability through the `EventLogger` interface:
 
-See [`core/interfaces.go`](core/interfaces.go) for full interface definitions.
+- Structured events for all authentication operations
+- Success/failure events with contextual metadata
+- Request context (IP, user agent, etc.)
+- No sensitive data in logs (passwords, keys, etc.)
 
-## Security
+Events include:
+- `attestation.attempt` / `attestation.success` / `attestation.failure`
+- `assertion.attempt` / `assertion.success` / `assertion.failure`
 
-### Threat Model
-
-NoPasswords addresses threats from the STRIDE model:
-
-- **Spoofing**: Strong cryptographic signatures, WebAuthn origin validation
-- **Tampering**: Signature verification, protocol integrity checks
-- **Repudiation**: Comprehensive audit logging
-- **Information Disclosure**: No credential storage in plaintext, timing attack prevention
-- **Denial of Service**: Rate limiting guidance, session timeouts
-- **Elevation of Privilege**: Challenge validation, session key protection
-
-### Reporting Security Issues
-
-Please report security vulnerabilities to [security@fergus.london](mailto:security@fergus.london).
-
-**Do not** open public GitHub issues for security vulnerabilities.
+Use the included stdout logger for development, or implement the interface for your logging infrastructure (slog, zap, logrus, etc.).
 
 ## Testing
+
+The library has complete test coverage of all authentication flows:
 
 ```bash
 # Run all tests
 make test
 
-# Run tests with race detector
+# Run with race detector
 make test-race
-
-# Generate coverage report
-make test-coverage
 
 # Run linters
 make lint
-
-# Run complete CI pipeline
-make ci
 ```
 
-## Client Libraries
-
-TypeScript client libraries are available for browser-based authentication:
-
-- **WebAuthn**: [`client/`](client/) - Published as `@nopasswords/webauthn-client`
-- **SRP**: [`client-srp/`](client-srp/) - Published as `@nopasswords/srp-client`
-
-Both libraries:
-- Zero dependencies (except build tools)
-- TypeScript with full type definitions
-- Single IIFE bundle for easy integration
-- Comprehensive error handling
-
-## Examples
-
-All examples are in [`examples/`](examples/):
-
-- **[webauthn-demo](examples/webauthn-demo/)**: Complete WebAuthn registration and authentication
-- **[srp-demo](examples/srp-demo/)**: Complete SRP registration and authentication
-- **[audit-logging](examples/audit-logging/)**: Audit logging patterns and integration
-
-⚠️ **Examples are for demonstration only. Do not use in production without proper security hardening.**
+Tests cover protocol correctness, concurrent usage, error conditions, and cross-language compatibility with the TypeScript client.
 
 ## Documentation
 
-- **[Godoc](https://pkg.go.dev/go.fergus.london/nopasswords)**: Complete API documentation
-- **[INITIAL_IMPLEMENTATION.md](INITIAL_IMPLEMENTATION.md)**: Feature specifications and requirements
-- **[CHANGELOG.md](CHANGELOG.md)**: Detailed implementation history with security notes
-- **[CONTRIBUTING.md](CONTRIBUTING.md)**: Development guidelines
-- **[PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)**: High-level project overview
-- **[ROADMAP.md](ROADMAP.md)**: Future development plans
+- 📖 **[API Documentation](https://pkg.go.dev/go.fergus.london/nopasswords)**: Complete Go API reference
+- 📁 **[docs/](docs/)**: Additional documentation including security guidance and roadmap ideas.
+- 💡 **[cmd/examples/srp-demo](cmd/examples/srp-demo)**: Complete working example
+
+## What This Library Does NOT Do
+
+NoPasswords is intentionally focused. It does **not** handle:
+
+- Session management (use your existing session infrastructure)
+- Rate limiting (implement at your application/network layer)
+- User account creation/management
+- Account recovery flows
+- Email/SMS delivery for magic links
+
+These are your application's responsibility. _NoPasswords handles the cryptographic proof; you handle the business logic._
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for:
+- Threat model and mitigations
+- Security best practices
+- Vulnerability reporting
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Development Workflow
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests and linters (`make check`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+Contributions welcome - simply submit a Pull Request. I do ask that tests are included for any sensitive/critical operations, but there are no requirements for adhering to specific test coverage metrics.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [go-webauthn/webauthn](https://github.com/go-webauthn/webauthn) - WebAuthn library foundation
-- RFC5054 - Secure Remote Password specification
-- The passwordless authentication community
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for planned features and enhancements.
+- 🚧 `RedisParameterStore` and `RedisStateCache` implementations (in progress)
+- 🚧 WebAuthn/FIDO2 support (in progress)
+- MFA - TOTP and WebAuthn 
 
-## Support
-
-- **Documentation**: [pkg.go.dev](https://pkg.go.dev/go.fergus.london/nopasswords)
-- **Issues**: [GitHub Issues](https://github.com/FergusInLondon/nopasswords/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/FergusInLondon/nopasswords/discussions)
-
----
-
-**Built with ❤️ for secure, passwordless authentication**
+See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed plans.

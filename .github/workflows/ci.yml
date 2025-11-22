@@ -143,7 +143,7 @@ jobs:
 
     - name: Verify example binaries
       run: |
-        test -f examples/srp-demo/srp-demo
+        test -f cmd/examples/srp-demo/srp-demo
 
   # Security scanning
   security:
