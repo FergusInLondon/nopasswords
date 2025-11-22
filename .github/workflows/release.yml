@@ -34,13 +34,14 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         title: Client Version - v${{ steps.version.outputs.VERSION }}
-        tag_name: ${{ github.ref }}
+        tag: ${{ github.ref }}
       if: startsWith(github.ref, 'refs/tags/')
 
   # Publish to npm
   publish-npm:
     name: Publish to npm
     runs-on: ubuntu-latest
+    environment: npm
     needs: create-release
 
     steps:
@@ -74,7 +75,7 @@ jobs:
       run: make client-test
 
     - name: Publish to npm
-      run: cd client && npm publish --provenance
+      run: cd client && npm publish
       if: startsWith(github.ref, 'refs/tags/')
 
   # Publish documentation
