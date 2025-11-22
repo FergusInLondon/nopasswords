@@ -1,5 +1,5 @@
 .PHONY: help test test-verbose test-coverage test-race lint fmt vet tidy clean deps check build \
-        client-install client client-build client-lint client-clean \
+        client-install client client-build client-test client-lint client-clean \
         examples dev all ci
 
 # Default target
@@ -114,6 +114,11 @@ client: client-clean client-install client-build
 		cp ${BUILT_CLIENT}.map cmd/examples/$$ex/static/nopasswords.min.js.map; \
 		cp ${BUILT_CLIENT} cmd/examples/$$ex/static/nopasswords.min.js; \
 	done
+
+## client-test: Run client tests
+client-test:
+	@echo "Running client tests..."
+	cd client && npm test && cd ..
 
 ## client-lint: Lint client code
 client-lint:

@@ -65,9 +65,9 @@ jobs:
       # @mitigation: Continue on error to prevent external service failures from blocking CI
       continue-on-error: true
 
-  # Client (TypeScript) linting and building
+  # Client (TypeScript) linting, testing, and building
   client-test:
-    name: Client Build & Lint
+    name: Client Tests, Build & Lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -85,6 +85,12 @@ jobs:
         cache-dependency-path: |
           client/package-lock.json
 
+    - name: Set up Go (for cross-implementation tests)
+      uses: actions/setup-go@v6
+      with:
+        go-version: '1.24'
+        cache: true
+
     - name: Install client dependencies
       run: make client-install
 
@@ -93,6 +99,9 @@ jobs:
 
     - name: Build client libraries
       run: make client-build
+
+    - name: Run client tests
+      run: make client-test
 
     - name: Check client artifacts
       run: |
