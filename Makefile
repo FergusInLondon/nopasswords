@@ -22,7 +22,7 @@ COVERAGE_HTML=$(COVERAGE_DIR)/coverage.html
 
 # Example directories
 BUILT_CLIENT=client/dist/nopasswords.js
-EXAMPLES=webauthn-demo srp-demo
+EXAMPLES=srp-demo
 
 ## help: Display this help message
 help:
