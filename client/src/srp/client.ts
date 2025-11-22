@@ -352,7 +352,7 @@ export class SRPClient {
   /**
    * HTTP POST helper.
    */
-  private async post<T>(endpoint: string, body: any): Promise<T> {
+  private async post<T>(endpoint: string, body: unknown): Promise<T> {
     const url = this.config.baseURL + endpoint;
     const response = await fetch(url, {
       method: 'POST',
@@ -366,6 +366,6 @@ export class SRPClient {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   }
 }
