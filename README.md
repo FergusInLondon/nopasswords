@@ -23,18 +23,12 @@ This isn't an authentication/authorization framework—it's a **proof of presenc
 
 ## Terminology
 
-NoPasswords uses WebAuthn terminology:
+NoPasswords uses generic terminology to avoid any confusion:
 
 - **Attestation**: The registration/enrollment process where a user creates a new credential
 - **Assertion**: The authentication/verification process where a user proves possession of their credential
 
 This terminology reflects that the library proves presence rather than handling full authentication flows.
-
-## Installation
-
-```bash
-go get go.fergus.london/nopasswords
-```
 
 ## Quick Start
 
@@ -68,7 +62,7 @@ func main() {
     http.HandleFunc("/api/register", manager.AttestationHandlerFunc(
         func(params srp.Parameters) {
             fmt.Printf("User registered: %s\n", params.UserIdentifier)
-            // Store user, create session, etc.
+            // Store user etc.
         },
     ))
 
@@ -92,15 +86,22 @@ func main() {
 import { SRPClient } from '@nopasswords/srp-client';
 
 // Registration
-const client = new SRPClient();
-await client.register('user@example.com', 'password', '/api/register');
+const client = new SRPClient({
+    group: 3,
+    attestationPath: "/api/register",
+    assertionInitiationPath: "/api/login/begin",
+    assertionCompeltionPath: "/api/login/finish"
+});
+await client.attest('user@example.com', 'password');
 
 // Authentication
-const authClient = new SRPClient();
-await authClient.authenticate('user@example.com', 'password', {
-    beginURL: '/api/login/begin',
-    finishURL: '/api/login/finish'
+const authClient = new SRPClient({
+    group: 3,
+    attestationPath: "/api/register",
+    assertionInitiationPath: "/api/login/begin",
+    assertionCompeltionPath: "/api/login/finish"
 });
+await authClient.authenticate('user@example.com', 'password');
 ```
 
 See [cmd/examples/srp-demo](cmd/examples/srp-demo) for a complete working example with client and server code.
