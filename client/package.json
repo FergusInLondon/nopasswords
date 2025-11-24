@@ -1,6 +1,6 @@
 {
   "name": "nopasswords-client",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Client library for NoPasswords",
   "main": "dist/nopasswords.js",
   "types": "dist/index.d.ts",
