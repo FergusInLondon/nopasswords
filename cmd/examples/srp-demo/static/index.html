@@ -348,7 +348,7 @@
 
             try {
                 showStatus('login-status', '⏳ Authenticating...', 'info');
-                const result = await srpClient.attest(email, password);
+                const result = await srpClient.assert(email, password);
 
                 if (result.success) {
                     showStatus('login-status',
