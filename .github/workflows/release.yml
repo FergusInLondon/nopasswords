@@ -51,7 +51,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v6
       with:
-        node-version: '25'
+        node-version: '${{ vars.NODE_VERSION }}'
         cache: 'npm'
         cache-dependency-path: |
           client/package-lock.json
@@ -91,7 +91,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version: '1.24'
+        go-version: '${{ vars.GO_VERSION }}'
 
     - name: Generate Go documentation
       run: |
