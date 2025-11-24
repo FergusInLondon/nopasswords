@@ -10,14 +10,14 @@
 
 import {
   SRPConfig,
-  RegistrationRequest,
-  RegistrationResponse,
-  AuthenticationBeginRequest,
-  AuthenticationBeginResponse,
-  AuthenticationFinishRequest,
-  AuthenticationFinishResponse,
-  RegistrationResult,
-  AuthenticationResult,
+  AttestationRequest,
+  AttestationResponse,
+  AssertionBeginRequest,
+  AssertionBeginResponse,
+  AssertionFinishRequest,
+  AssertionFinishResponse,
+  AttestationResult,
+  AssertionResult,
 } from './types';
 import { getGroup, computeK, bigIntToBytes, bytesToBigInt, padBytes } from './groups';
 
@@ -58,7 +58,7 @@ export class SRPClient {
    * @mitigation Information Disclosure: Password never leaves the client.
    * @mitigation Spoofing: Verifier cannot be used to recover the password.
    */
-  async register(identifier: string, password: string): Promise<RegistrationResult> {
+  async attest(identifier: string, password: string): Promise<AttestationResult> {
     try {
       // Get group parameters
       const group = getGroup(this.config.group);
@@ -74,7 +74,7 @@ export class SRPClient {
       const v = this.modPow(group.g, x, group.N);
 
       // Prepare registration request
-      const request: RegistrationRequest = {
+      const request: AttestationRequest = {
         identifier: identifier,
         salt: this.bytesToBase64(salt),
         verifier: this.bytesToBase64(bigIntToBytes(v)),
@@ -82,7 +82,7 @@ export class SRPClient {
       };
 
       // Send registration request to server
-      const response = await this.post<RegistrationResponse>(this.config.registrationPath, request);
+      const response = await this.post<AttestationResponse>(this.config.attestationPath, request);
 
       return {
         success: response.success,
@@ -114,16 +114,16 @@ export class SRPClient {
    * @mitigation Tampering: Protocol ensures both parties have the correct password.
    * @mitigation Information Disclosure: Session key is derived, not transmitted.
    */
-  async authenticate(identifier: string, password: string): Promise<AuthenticationResult> {
+  async assert(identifier: string, password: string): Promise<AssertionResult> {
     try {
       // Step 1: Begin authentication - get salt and B from server
-      const beginRequest: AuthenticationBeginRequest = {
+      const beginRequest: AssertionBeginRequest = {
         identifier: identifier,
         group: this.config.group,
       };
 
-      const beginResponse = await this.post<AuthenticationBeginResponse>(
-        this.config.initiateAuthPath, beginRequest
+      const beginResponse = await this.post<AssertionBeginResponse>(
+        this.config.assertionInitiationPath, beginRequest
       );
 
       const salt = this.base64ToBytes(beginResponse.salt);
@@ -169,20 +169,20 @@ export class SRPClient {
       const M1 = await this.computeM1(A, B, K);
 
       // Step 2: Send A and M1 to server
-      const finishRequest: AuthenticationFinishRequest = {
+      const finishRequest: AssertionFinishRequest = {
         identifier: identifier,
         a: this.bytesToBase64(bigIntToBytes(A)),
         m1: this.bytesToBase64(M1),
       };
 
-      const finishResponse = await this.post<AuthenticationFinishResponse>(
-        this.config.completeAuthPath, finishRequest
+      const finishResponse = await this.post<AssertionFinishResponse>(
+        this.config.assertionCompletionPath, finishRequest
       );
 
       if (!finishResponse.success) {
         return {
           success: false,
-          error: finishResponse.error || 'Authentication failed',
+          error: finishResponse.error || 'Assertion failed',
         };
       }
 

@@ -12,18 +12,18 @@ export interface SRPConfig {
   group: 3 | 4 | 5;
   /** Base URL for API endpoints */
   baseURL: string;
-  /** Path to the Registration Endpoint */
-  registrationPath: string;
-  /** Path to initiate authentication. */
-  initiateAuthPath: string;
-  /** Path to complete authentication. */
-  completeAuthPath: string;
+  /** Path to the attestation endpoint */
+  attestationPath: string;
+  /** Path to initiate assertion. */
+  assertionInitiationPath: string;
+  /** Path to complete assertion. */
+  assertionCompletionPath: string;
 }
 
 /**
- * Registration request sent to the server.
+ * Attestation request sent to the server.
  */
-export interface RegistrationRequest {
+export interface AttestationRequest {
   identifier: string;
   salt: string;  // Base64-encoded
   verifier: string;  // Base64-encoded
@@ -31,62 +31,62 @@ export interface RegistrationRequest {
 }
 
 /**
- * Registration response from the server.
+ * Attestation response from the server.
  */
-export interface RegistrationResponse {
+export interface AttestationResponse {
   success: boolean;
   identifier?: string;
   error?: string;
 }
 
 /**
- * Authentication begin request sent to the server.
+ * Assertion begin request sent to the server.
  */
-export interface AuthenticationBeginRequest {
+export interface AssertionBeginRequest { // TODO: These need renaming...!
   identifier: string;
   group?: number;
 }
 
 /**
- * Authentication begin response from the server.
+ * Assertion begin response from the server.
  */
-export interface AuthenticationBeginResponse {
+export interface AssertionBeginResponse {
   salt: string;  // Base64-encoded
   b: string;  // Base64-encoded (server's public ephemeral value B)
   group: number;
 }
 
 /**
- * Authentication finish request sent to the server.
+ * Assertion finish request sent to the server.
  */
-export interface AuthenticationFinishRequest {
+export interface AssertionFinishRequest {
   identifier: string;
   a: string;  // Base64-encoded (client's public ephemeral value A)
   m1: string;  // Base64-encoded (client's proof)
 }
 
 /**
- * Authentication finish response from the server.
+ * Assertion finish response from the server.
  */
-export interface AuthenticationFinishResponse {
+export interface AssertionFinishResponse {
   success: boolean;
   m2?: string;  // Base64-encoded (server's proof)
   error?: string;
 }
 
 /**
- * Result of a registration operation.
+ * Result of a attesation operation.
  */
-export interface RegistrationResult {
+export interface AttestationResult {
   success: boolean;
   identifier?: string;
   error?: string;
 }
 
 /**
- * Result of an authentication operation.
+ * Result of an assertion operation.
  */
-export interface AuthenticationResult {
+export interface AssertionResult {
   success: boolean;
   sessionKey?: Uint8Array;  // Shared session key (K)
   error?: string;

@@ -9,9 +9,9 @@ describe('SRPClient - Registration Integration', () => {
     client = new SRPClient({
       group: 3,
       baseURL: 'http://localhost:8080',
-      registrationPath: '/register',
-      initiateAuthPath: '/auth/begin',
-      completeAuthPath: '/auth/complete',
+      attestationPath: '/register',
+      assertionInitiationPath: '/auth/begin',
+      assertionCompletionPath: '/auth/complete',
     });
 
     // Mock global fetch
@@ -33,7 +33,7 @@ describe('SRPClient - Registration Integration', () => {
       }),
     });
 
-    const result = await client.register('user@example.com', 'password123');
+    const result = await client.attest('user@example.com', 'password123');
 
     expect(result.success).toBe(true);
     expect(result.identifier).toBe('user@example.com');
@@ -65,7 +65,7 @@ describe('SRPClient - Registration Integration', () => {
       }),
     });
 
-    const result = await client.register('existing@example.com', 'password123');
+    const result = await client.attest('existing@example.com', 'password123');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('User already registered');
@@ -79,7 +79,7 @@ describe('SRPClient - Registration Integration', () => {
       statusText: 'Internal Server Error',
     });
 
-    const result = await client.register('user@example.com', 'password123');
+    const result = await client.attest('user@example.com', 'password123');
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('HTTP 500');
@@ -89,7 +89,7 @@ describe('SRPClient - Registration Integration', () => {
     // Mock network failure
     fetchMock.mockRejectedValueOnce(new Error('Network error'));
 
-    const result = await client.register('user@example.com', 'password123');
+    const result = await client.attest('user@example.com', 'password123');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Network error');
@@ -101,8 +101,8 @@ describe('SRPClient - Registration Integration', () => {
       json: async () => ({ success: true, identifier: 'user@example.com' }),
     });
 
-    await client.register('user@example.com', 'password123');
-    await client.register('user@example.com', 'password123');
+    await client.attest('user@example.com', 'password123');
+    await client.attest('user@example.com', 'password123');
 
     // Get the salts from both calls
     const salt1 = JSON.parse(fetchMock.mock.calls[0][1].body).salt;
@@ -118,8 +118,8 @@ describe('SRPClient - Registration Integration', () => {
       json: async () => ({ success: true, identifier: 'user@example.com' }),
     });
 
-    await client.register('user@example.com', 'password1');
-    await client.register('user@example.com', 'password2');
+    await client.attest('user@example.com', 'password1');
+    await client.attest('user@example.com', 'password2');
 
     // Get the verifiers from both calls
     const verifier1 = JSON.parse(fetchMock.mock.calls[0][1].body).verifier;

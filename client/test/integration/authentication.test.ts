@@ -10,9 +10,9 @@ describe('SRPClient - Authentication Integration', () => {
     client = new SRPClient({
       group: 3,
       baseURL: 'http://localhost:8080',
-      registrationPath: '/register',
-      initiateAuthPath: '/auth/begin',
-      completeAuthPath: '/auth/complete',
+      attestationPath: '/register',
+      assertionInitiationPath: '/auth/begin',
+      assertionCompletionPath: '/auth/complete',
     });
 
     fetchMock = vi.fn();
@@ -51,7 +51,7 @@ describe('SRPClient - Authentication Integration', () => {
       }),
     });
 
-    const result = await client.authenticate('user@example.com', 'password123');
+    const result = await client.assert('user@example.com', 'password123');
 
     // Should succeed (we're not verifying M2 correctness in this test)
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -81,7 +81,7 @@ describe('SRPClient - Authentication Integration', () => {
       statusText: 'Unauthorized',
     });
 
-    const result = await client.authenticate('user@example.com', 'password123');
+    const result = await client.assert('user@example.com', 'password123');
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('HTTP 401');
@@ -111,7 +111,7 @@ describe('SRPClient - Authentication Integration', () => {
       }),
     });
 
-    const result = await client.authenticate('user@example.com', 'wrongpassword');
+    const result = await client.assert('user@example.com', 'wrongpassword');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Invalid proof');
@@ -120,7 +120,7 @@ describe('SRPClient - Authentication Integration', () => {
   it('should handle network error during begin', async () => {
     fetchMock.mockRejectedValueOnce(new Error('Network error'));
 
-    const result = await client.authenticate('user@example.com', 'password123');
+    const result = await client.assert('user@example.com', 'password123');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Network error');
@@ -144,7 +144,7 @@ describe('SRPClient - Authentication Integration', () => {
     // Complete has network error
     fetchMock.mockRejectedValueOnce(new Error('Connection timeout'));
 
-    const result = await client.authenticate('user@example.com', 'password123');
+    const result = await client.assert('user@example.com', 'password123');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Connection timeout');
@@ -173,7 +173,7 @@ describe('SRPClient - Authentication Integration', () => {
       }),
     });
 
-    const result = await client.authenticate('user@example.com', 'password123');
+    const result = await client.assert('user@example.com', 'password123');
 
     // Even though M2 verification might fail, the structure should have sessionKey
     if (result.success) {

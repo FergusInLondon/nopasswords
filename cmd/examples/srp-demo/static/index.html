@@ -277,12 +277,12 @@
     <script src="nopasswords.min.js"></script>
     <script>
         // Initialize the SRP client
-        const srpClient = new NoPasswordsSRP.SRPClient({
+        const srpClient = new NoPasswords.SRPClient({
             group: 3,
             baseURL: 'http://localhost:8081',
-            registrationPath: '/api/srp/register',
-            initiateAuthPath: '/api/srp/authenticate/begin',
-            completeAuthPath: '/api/srp/authenticate/finish'
+            attestationPath: '/api/srp/register',
+            assertionInitiationPath: '/api/srp/authenticate/begin',
+            assertionCompletionPath: '/api/srp/authenticate/finish'
         });
 
         function switchTab(tab) {
@@ -317,9 +317,7 @@
 
             try {
                 showStatus('register-status', '⏳ Computing verifier...', 'info');
-
-                // Use the real SRP client to register
-                const result = await srpClient.register(email, password);
+                const result = await srpClient.attest(email, password);
 
                 if (result.success) {
                     showStatus('register-status',
@@ -350,19 +348,13 @@
 
             try {
                 showStatus('login-status', '⏳ Authenticating...', 'info');
-
-                // Use the real SRP client to authenticate
-                const result = await srpClient.authenticate(email, password);
+                const result = await srpClient.attest(email, password);
 
                 if (result.success) {
-                    const sessionKeyHex = Array.from(result.sessionKey)
-                        .map(b => b.toString(16).padStart(2, '0'))
-                        .join('');
-
                     showStatus('login-status',
                         `✅ Authentication successful!<br><br>` +
-                        `<strong>Session Key (first 32 bytes):</strong><br>` +
-                        `<code style="word-break: break-all;">${sessionKeyHex.substring(0, 64)}...</code><br><br>` +
+                        `<strong>Server Proof (m2):</strong><br>` +
+                        `<code style="word-break: break-all;">${result.m2}</code><br><br>` +
                         `Your password never left the browser! Both you and the server proved knowledge of ` +
                         `the password without transmitting it.`,
                         'success'

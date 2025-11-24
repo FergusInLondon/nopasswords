@@ -80,7 +80,7 @@ describe('SRP Cross-Implementation E2E', () => {
     // Stop the server
     if (serverProcess && serverProcess.pid) {
       try {
-        serverProcess.kill('SIGTERM');
+        serverProcess.kill('SIGTERM'); // TODO: This doesn't happen. Dodgy error handling?
         console.log('Go SRP server stopped');
       } catch (error) {
         // Process might already be dead
@@ -95,23 +95,23 @@ describe('SRP Cross-Implementation E2E', () => {
     client = new SRPClient({
       group: 3,
       baseURL: BASE_URL,
-      registrationPath: '/api/srp/register',
-      initiateAuthPath: '/api/srp/authenticate/begin',
-      completeAuthPath: '/api/srp/authenticate/finish',
+      attestationPath: '/api/srp/register',
+      assertionInitiationPath: '/api/srp/authenticate/begin',
+      assertionCompletionPath: '/api/srp/authenticate/finish',
     });
 
     const identifier = `testuser-${Date.now()}@example.com`;
     const password = 'SecurePassword123!';
 
     // Step 1: Register the user
-    const registerResult = await client.register(identifier, password);
+    const registerResult = await client.attest(identifier, password);
 
     expect(registerResult.success).toBe(true);
     expect(registerResult.identifier).toBe(identifier);
     expect(registerResult.error).toBeUndefined();
 
     // Step 2: Authenticate with the same credentials
-    const authResult = await client.authenticate(identifier, password);
+    const authResult = await client.assert(identifier, password);
 
     expect(authResult.success).toBe(true);
     expect(authResult.sessionKey).toBeInstanceOf(Uint8Array);
@@ -123,9 +123,9 @@ describe('SRP Cross-Implementation E2E', () => {
     client = new SRPClient({
       group: 3,
       baseURL: BASE_URL,
-      registrationPath: '/api/srp/register',
-      initiateAuthPath: '/api/srp/authenticate/begin',
-      completeAuthPath: '/api/srp/authenticate/finish',
+      attestationPath: '/api/srp/register',
+      assertionInitiationPath: '/api/srp/authenticate/begin',
+      assertionCompletionPath: '/api/srp/authenticate/finish',
     });
 
     const identifier = `testuser2-${Date.now()}@example.com`;
@@ -133,11 +133,11 @@ describe('SRP Cross-Implementation E2E', () => {
     const wrongPassword = 'WrongPassword123!';
 
     // Register with correct password
-    const registerResult = await client.register(identifier, password);
+    const registerResult = await client.attest(identifier, password);
     expect(registerResult.success).toBe(true);
 
     // Attempt authentication with wrong password
-    const authResult = await client.authenticate(identifier, wrongPassword);
+    const authResult = await client.assert(identifier, wrongPassword);
 
     expect(authResult.success).toBe(false);
     expect(authResult.error).toBeDefined();
@@ -147,16 +147,16 @@ describe('SRP Cross-Implementation E2E', () => {
     client = new SRPClient({
       group: 3,
       baseURL: BASE_URL,
-      registrationPath: '/api/srp/register',
-      initiateAuthPath: '/api/srp/authenticate/begin',
-      completeAuthPath: '/api/srp/authenticate/finish',
+      attestationPath: '/api/srp/register',
+      assertionInitiationPath: '/api/srp/authenticate/begin',
+      assertionCompletionPath: '/api/srp/authenticate/finish',
     });
 
     const identifier = `nonexistent-${Date.now()}@example.com`;
     const password = 'SomePassword123!';
 
     // Attempt authentication without registration
-    const authResult = await client.authenticate(identifier, password);
+    const authResult = await client.assert(identifier, password);
 
     expect(authResult.success).toBe(false);
     expect(authResult.error).toBeDefined();
@@ -166,21 +166,21 @@ describe('SRP Cross-Implementation E2E', () => {
     client = new SRPClient({
       group: 3,
       baseURL: BASE_URL,
-      registrationPath: '/api/srp/register',
-      initiateAuthPath: '/api/srp/authenticate/begin',
-      completeAuthPath: '/api/srp/authenticate/finish',
+      attestationPath: '/api/srp/register',
+      assertionInitiationPath: '/api/srp/authenticate/begin',
+      assertionCompletionPath: '/api/srp/authenticate/finish',
     });
 
     const identifier = `testuser3-${Date.now()}@example.com`;
     const password = 'Password123!';
 
     // Register
-    const registerResult = await client.register(identifier, password);
+    const registerResult = await client.attest(identifier, password);
     expect(registerResult.success).toBe(true);
 
     // Authenticate multiple times
     for (let i = 0; i < 3; i++) {
-      const authResult = await client.authenticate(identifier, password);
+      const authResult = await client.assert(identifier, password);
       expect(authResult.success).toBe(true);
       expect(authResult.sessionKey).toBeInstanceOf(Uint8Array);
     }
