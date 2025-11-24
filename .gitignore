@@ -1,9 +1,8 @@
+.vscode/
 
 # Example static files (compiled)
 cmd/examples/*/static/*.js
 cmd/examples/*/static/*.map
 
 # Go binaries in examples
-cmd/examples/*/audit-logging
-cmd/examples/*/webauthn-demo
 cmd/examples/*/srp-demo
