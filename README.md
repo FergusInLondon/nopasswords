@@ -83,7 +83,7 @@ func main() {
 ### Client Setup (TypeScript)
 
 ```typescript
-import { SRPClient } from '@nopasswords/srp-client';
+import { SRPClient } from 'nopasswords-client';
 
 // Registration
 const client = new SRPClient({
@@ -153,18 +153,6 @@ Tests cover protocol correctness, concurrent usage, error conditions, and cross-
 - 📖 **[API Documentation](https://pkg.go.dev/go.fergus.london/nopasswords)**: Complete Go API reference
 - 📁 **[docs/](docs/)**: Additional documentation including security guidance and roadmap ideas.
 - 💡 **[cmd/examples/srp-demo](cmd/examples/srp-demo)**: Complete working example
-
-## What This Library Does NOT Do
-
-NoPasswords is intentionally focused. It does **not** handle:
-
-- Session management (use your existing session infrastructure)
-- Rate limiting (implement at your application/network layer)
-- User account creation/management
-- Account recovery flows
-- Email/SMS delivery for magic links
-
-These are your application's responsibility. _NoPasswords handles the cryptographic proof; you handle the business logic._
 
 ## Security
 
