@@ -3,7 +3,15 @@
   "version": "0.1.2",
   "description": "Client library for NoPasswords",
   "main": "dist/nopasswords.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/nopasswords.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc && node build.js",
     "watch": "tsc --watch",
